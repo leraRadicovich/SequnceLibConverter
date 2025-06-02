@@ -1,4 +1,4 @@
-package org.example;
+package org.example.config;
 
 
 import com.vaadin.flow.component.page.AppShellConfigurator;

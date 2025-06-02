@@ -1,32 +1,62 @@
-package org.example;
+package org.example.converter;
+
+import org.example.converter.helper.FileHelper;
+import org.example.converter.helper.model.Box;
+import org.example.converter.helper.model.Participant;
 
 import java.io.*;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
 import java.util.regex.Matcher;
 
-import static org.example.PatternStatic.*;
+import static org.example.constant.PatternStatic.*;
 
 public class SequenceDiagramConverter {
 
+    public void run(Path inputPath, Path outputDir) throws IOException {
+        System.setProperty("conversion.output.dir", outputDir.toString());
+        runWithPath(inputPath.toFile());
+    }
+
     public static void main(String[] args) {
         try {
-            List<File> inputFiles = UserInputHandler.getInputFiles();
-            for (File inputFile : inputFiles) {
-                if (isAlreadyProcessed(inputFile)) {
-                    System.out.println("Skipping: " + inputFile.getName());
-                    continue;
-                }
-                File outputFile = FileHelper.createOutputFile(inputFile);
-                processPumlFile(inputFile, outputFile);
-                System.out.println("Processed: " + inputFile.getName());
+            String pathString;
+            if (args.length == 0) {
+                Scanner scanner = new Scanner(System.in);
+                System.out.print("Enter path to .puml file or folder: ");
+                pathString = scanner.nextLine().trim();
+            } else {
+                pathString = args[0];
             }
+
+            Path inputPath = Path.of(pathString);
+            Path outputDir = inputPath.getParent() != null ? inputPath.getParent() : Path.of(".");
+            new SequenceDiagramConverter().run(inputPath, outputDir);
+
         } catch (IOException e) {
             System.err.println("Error: " + e.getMessage());
+        }
+    }
+
+    public static void runWithPath(File path) {
+        List<File> inputFiles = FileHelper.collectFiles(path);
+        for (File inputFile : inputFiles) {
+            runWithFile(inputFile);
+        }
+    }
+
+    public static void runWithFile(File inputFile) {
+        if (isAlreadyProcessed(inputFile)) {
+            System.out.println("Skipping: " + inputFile.getName());
+            return;
+        }
+
+        File outputFile = FileHelper.createOutputFile(inputFile);
+        try {
+            processPumlFile(inputFile, outputFile);
+            System.out.println("Processed: " + inputFile.getName());
+        } catch (IOException e) {
+            System.err.println("Error processing file: " + inputFile.getName() + ": " + e.getMessage());
         }
     }
 
@@ -35,7 +65,6 @@ public class SequenceDiagramConverter {
              BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile))) {
 
             boolean umlSectionStarted = false;
-            boolean headerAdded = false;
             String title = inputFile.getName().replace(".puml", "");
             boolean inSkinparamBlock = false;
             boolean inBox = false;
@@ -46,7 +75,6 @@ public class SequenceDiagramConverter {
             while ((line = reader.readLine()) != null) {
                 line = line.trim();
 
-                // Пропускаем строки с автонумерацией и параметрами стиля
                 if (inSkinparamBlock) {
                     if (line.equals("}")) inSkinparamBlock = false;
                     continue;
@@ -57,46 +85,39 @@ public class SequenceDiagramConverter {
                     continue;
                 }
 
-                // Обработка активации
                 Matcher activateMatcher = ACTIVATE_PATTERN.matcher(line);
                 if (activateMatcher.matches()) {
                     writer.write("ACTIVATE(" + activateMatcher.group(1) + ")\n");
                     continue;
                 }
 
-                // Обработка деактивации
                 Matcher deactivateMatcher = DEACTIVATE_PATTERN.matcher(line);
                 if (deactivateMatcher.matches()) {
                     writer.write("DEACTIVATE(" + deactivateMatcher.group(1) + ")\n");
                     continue;
                 }
 
-                // Обработка разделителей
                 Matcher dividerMatcher = DIVIDER_PATTERN.matcher(line);
                 if (dividerMatcher.matches()) {
                     writer.write("DEVIDER(\"" + dividerMatcher.group(1) + "\")\n");
                     continue;
                 }
 
-                // Обработка группировок
                 String groupLine = processGroup(line);
                 if (groupLine != null) {
                     writer.write(groupLine + "\n");
                     continue;
                 }
 
-                // Обработка end
                 if (line.equals("end")) {
                     writer.write("END()\n");
                     continue;
                 }
 
-                // Обработка box
                 Matcher boxMatcher = BOX_START_PATTERN.matcher(line);
                 if (boxMatcher.matches()) {
                     inBox = true;
-                    currentBox = new Box(boxMatcher.group(1),
-                            boxMatcher.group(2) != null ? boxMatcher.group(2) : "");
+                    currentBox = new Box(boxMatcher.group(1), boxMatcher.group(2));
                     continue;
                 }
 
@@ -107,7 +128,6 @@ public class SequenceDiagramConverter {
                     continue;
                 }
 
-                // Обработка участников (с удалением цвета)
                 line = processParticipantColor(line);
                 Participant participant = processParticipant(line);
                 if (participant != null) {
@@ -119,18 +139,16 @@ public class SequenceDiagramConverter {
                     continue;
                 }
 
-                // Обработка стрелок
                 String arrowLine = processArrow(line);
                 if (arrowLine != null) {
                     writer.write(arrowLine + "\n");
                     continue;
                 }
 
-                // Обработка стартовой секции
                 if (!umlSectionStarted && line.equals("@startuml")) {
                     umlSectionStarted = true;
                     writer.write("@startuml\n");
-                    writer.write("!include C:/Users/Vpatrushev/IdeaProjects/pafp-wiki/UML_LIB/umlLib/seqLib4/SequenceLibIncludeFile_v4.puml\n");
+                    writer.write("!include path/to/SequenceLibIncludeFile.puml\n");
                     writer.write("diagramInit(draft, \"" + title + "\")\n");
                     continue;
                 }
@@ -159,10 +177,7 @@ public class SequenceDiagramConverter {
             text = rest.substring(colorMatcher.end()).trim();
         }
 
-        return String.format("%s(%s, \"%s\")",
-                type,
-                color,
-                text.replace("\"", "\\\""));
+        return String.format("%s(%s, \"%s\")", type, color, text.replace("\"", "\\\""));
     }
 
     private static String processParticipantColor(String line) {
@@ -196,8 +211,7 @@ public class SequenceDiagramConverter {
         String from = isReverse ? right : left;
         String to = isReverse ? left : right;
 
-        return String.format("%s(%s, %s, \"%s\", \"%s\", \"\")",
-                procType, from, to, operators, text);
+        return String.format("%s(%s, %s, \"%s\", \"%s\", \"\")", procType, from, to, operators, text);
     }
 
     private static void writeBoxContent(BufferedWriter writer, Box box, List<Participant> participants) throws IOException {
@@ -207,90 +221,17 @@ public class SequenceDiagramConverter {
 
         StringBuilder participantsList = new StringBuilder();
         for (Participant p : participants) {
-            participantsList.append(p.alias != null ? p.alias : p.name).append(",");
+            participantsList.append(p.aliasOrName()).append(",");
         }
+
         if (participantsList.length() > 0) {
             participantsList.deleteCharAt(participantsList.length() - 1);
         }
 
-        writer.write(String.format("BOX(\"%s\", %s, \"%s\")\n",
-                box.name, box.color, participantsList));
+        writer.write(String.format("BOX(\"%s\", %s, \"%s\")\n", box.name(), box.color(), participantsList));
     }
 
     private static boolean isAlreadyProcessed(File file) {
         return file.getName().toLowerCase().endsWith("_bylib.puml");
-    }
-
-    static class Participant {
-        String type;
-        String name;
-        String alias;
-        String order;
-
-        Participant(String type, String name, String alias, String order) {
-            this.type = type;
-            this.name = name;
-            this.alias = alias;
-            this.order = order;
-        }
-
-        String toPartiesString() {
-            return String.format("parties(%s,\"%s\",%s,%s)",
-                    type, name, alias != null ? alias : "", order != null ? order : "");
-        }
-    }
-
-    static class Box {
-        String name;
-        String color;
-
-        Box(String name, String color) {
-            this.name = name;
-            this.color = color != null ? color : "";
-        }
-    }
-
-    static class UserInputHandler {
-        public static List<File> getInputFiles() throws IOException {
-            Scanner scanner = new Scanner(System.in);
-            System.out.print("Enter path: ");
-            File path = new File(scanner.nextLine().trim());
-
-            List<File> files = new ArrayList<>();
-
-            if (path.isDirectory()) {
-                File[] found = path.listFiles(f ->
-                        f.getName().endsWith(".puml") && !isAlreadyProcessed(f));
-                if (found != null) Collections.addAll(files, found);
-            } else if (path.isFile() && !isAlreadyProcessed(path)) {
-                files.add(path);
-            }
-
-            if (files.isEmpty()) throw new IOException("No files to process");
-            return files;
-        }
-
-        private static boolean isAlreadyProcessed(File f) {
-            return f.getName().toLowerCase().endsWith("_bylib.puml");
-        }
-    }
-
-    static class FileHelper {
-        public static File createOutputFile(File input) {
-            String name = input.getName().replace(".puml", "_byLib.puml");
-            return new File(input.getParentFile(), name);
-        }
-    }
-
-    public static void runWithPath(Path inputPath) {
-        Path baseDir = inputPath.getParent() != null ?
-                inputPath.getParent() : Paths.get("");
-
-        try (FileProcessor processor = new FileProcessor(baseDir)) {
-            processor.process(inputPath);
-        } catch (Exception e) {
-            System.err.println("Critical error: " + e.getMessage());
-            e.printStackTrace();
-        }
     }
 }

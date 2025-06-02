@@ -1,14 +1,14 @@
-package org.example;
+package org.example.deconverter;
 
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.FileWriter;
 import java.nio.file.*;
 import java.time.LocalDateTime;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 public class FileProcessor implements AutoCloseable {
-    private static final String RESULT_DIR = "result";
     private static final String OUTPUT_SUFFIX = "_unicode_ascii_result.txt";
     private static final String LOG_FILE = "processing.log";
 
@@ -19,8 +19,7 @@ public class FileProcessor implements AutoCloseable {
     public FileProcessor(Path baseDir) throws IOException {
         this.baseDir = baseDir;
         this.logger = setupLogger();
-        this.generator = new PlantUmlAsciiGenerator(logger); // Передаем логгер
-
+        this.generator = new PlantUmlAsciiGenerator(logger);
     }
 
     public void process(Path inputPath) throws IOException {
@@ -48,15 +47,10 @@ public class FileProcessor implements AutoCloseable {
     private void processSingleFile(Path pumlFile) {
         try {
             log("Обработка файла: " + pumlFile.getFileName());
-            Path resultDir = createResultDir(pumlFile.getParent());
+            Path resultDir = resolveOutputDir();
 
-            // Генерация ASCII-арта
             generator.generateAsciiArt(pumlFile, resultDir);
-
-            // Переименование выходного файла
             renameOutputFile(pumlFile, resultDir);
-
-            // Обработка результатов
             processGeneratedFile(pumlFile, resultDir);
 
             log("Успешно обработан: " + pumlFile.getFileName());
@@ -68,11 +62,7 @@ public class FileProcessor implements AutoCloseable {
     private void processGeneratedFile(Path pumlFile, Path resultDir) throws IOException {
         String fileName = pumlFile.getFileName().toString();
         String baseName = fileName.substring(0, fileName.lastIndexOf('.'));
-
-        // Путь к сгенерированному файлу
-        Path asciiFile = resultDir.resolve(baseName + "_unicode_ascii_result.txt");
-
-        // Парсинг и сохранение разделенных файлов
+        Path asciiFile = resultDir.resolve(baseName + OUTPUT_SUFFIX);
         ResultParser.saveSplitResults(asciiFile, resultDir, baseName);
     }
 
@@ -89,21 +79,22 @@ public class FileProcessor implements AutoCloseable {
         }
     }
 
-    private Path createResultDir(Path parentDir) throws IOException {
-        Path resultDir = parentDir.resolve(RESULT_DIR);
-        if (!Files.exists(resultDir)) {
-            Files.createDirectories(resultDir);
-            log("Создана директория: " + resultDir);
+    private Path resolveOutputDir() throws IOException {
+        String customDir = System.getProperty("conversion.output.dir");
+        if (customDir != null && !customDir.isBlank()) {
+            Path dir = Paths.get(customDir);
+            Files.createDirectories(dir);
+            return dir;
         }
-        return resultDir;
+        Path fallback = baseDir.resolve("result").resolve(UUID.randomUUID().toString());
+        Files.createDirectories(fallback);
+        return fallback;
     }
 
     private PrintWriter setupLogger() throws IOException {
-        Path logDir = baseDir.resolve(RESULT_DIR);
-        Files.createDirectories(logDir);
-        Path logFile = logDir.resolve(LOG_FILE);
-        return new PrintWriter(
-                new FileWriter(logFile.toFile(), true), true);
+        Path resultDir = resolveOutputDir();
+        Path logFile = resultDir.resolve(LOG_FILE);
+        return new PrintWriter(new FileWriter(logFile.toFile(), true), true);
     }
 
     private void log(String message) {
@@ -122,6 +113,4 @@ public class FileProcessor implements AutoCloseable {
     private boolean isPumlFile(Path path) {
         return path.toString().toLowerCase().endsWith(".puml");
     }
-
-
 }
