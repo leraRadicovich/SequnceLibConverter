@@ -1,0 +1,112 @@
+              Диаграмма: <color:blue>Файл для обратной конвертации                                                               
+               Режим: <color:blue>final</color>; Генерация кода в оригинальном синтаксисе: <color:blue>**включена**              
+                                                                                                                                 
+                                                                               ,.-^^-._                                          
+                                                                              |-.____.-|                                         
+                                                                              |        |                                         
+                                                                              |        |                                         
+                                          ┌─────┐               ┌───┐         |        |                                         
+                                          │Alice│               │Bob│         '-.____.-'                                         
+                                          └──┬──┘               └─┬─┘           Redis                                            
+                                         ╔═══╧════════════════════╧═══════════════╧═══╗                                          
+                                         ║Данный файл содержит директиву ORIGINAL    ░║                                          
+                                         ╚═══╤════════════════════╤═══════════════╤═══╝                                          
+                                             │                    │               │                                              
+                                             │   ╔════════════════╧════════════╗  │                                              
+═════════════════════════════════════════════╪═══╣ Файл для прямой конвертации ╠══╪══════════════════════════════════════════════
+                                             │   ╚════════════════╤════════════╝  │                                              
+                                             │                    │               │                                              
+                                             𝟏 Текст для стрелки ┌┴┐              │                                              
+                                             │─────────────────> │ │              │                                              
+                                             │                   │ │              │                                              
+                                         ┌──────────────────────────────────────────────────┐                                    
+                                         │<color:red><&media-play> <color:black>EVENT_NAME  │                                    
+                                         └──────────────────────────────────────────────────┘                                    
+                                             │     𝟐 Text        │ │              │                                              
+                                             │<─ ─ ─ ─ ─ ─ ─ ─ ─ │ │              │                                              
+                                             │                   │ │              │                                              
+                                         ╔═══╧═══════════════════╧═╧══════════════╧═══╗                                          
+                                         ║Test Note                                  ░║                                          
+                                         ╚═══╤═══════════════════╤═╤══════════════╤═══╝                                          
+                                             │              𝟑 asdf │              │                                              
+                                             │───────────────────────────────────>│                                              
+                                             │                   │ │              │                                              
+  ╔══════════════════════════════════════════╧═══════════════════╧═╧══════════════╧════════════════════════════════════════════╗ 
+  ║@startuml                                                                                                                  ░║ 
+  ║                                                                                                                            ║ 
+  ║autonumber                                                                                                                  ║ 
+  ║skinparam dpi 70                                                                                                            ║ 
+  ║skinparam maxMessageSize 200                                                                                                ║ 
+  ║skinparam backgroundColor LightGray                                                                                         ║ 
+  ║skinparam sequence {                                                                                                        ║ 
+  ║ArrowColor blue                                                                                                             ║ 
+  ║ActorBorderColor blue                                                                                                       ║ 
+  ║LifeLineBorderColor blue                                                                                                    ║ 
+  ║LifeLineBackgroundColor #White                                                                                              ║ 
+  ║ParticipantBorderColor blue                                                                                                 ║ 
+  ║ParticipantBackgroundColor DodgerBlue                                                                                       ║ 
+  ║ParticipantFontName Impact                                                                                                  ║ 
+  ║ParticipantFontSize 17                                                                                                      ║ 
+  ║ParticipantFontColor #A9DCDF                                                                                                ║ 
+  ║ActorBackgroundColor DodgerBlue                                                                                             ║ 
+  ║ActorFontColor DeepSkyBlue                                                                                                  ║ 
+  ║ActorFontSize 17                                                                                                            ║ 
+  ║ActorFontName Aapex                                                                                                         ║ 
+  ║}                                                                                                                           ║ 
+  ║                                                                                                                            ║ 
+  ║title Диаграмма: <color:blue>Файл для обратной конвертации                                                                  ║ 
+  ║header <color:black>by SequenceLib.v.4.0.\n <color:black>Author: PVR                                                        ║ 
+  ║                                                                                                                            ║ 
+  ║participant "Alice" as Alice                                                                                                ║ 
+  ║participant "Bob" as Bob                                                                                                    ║ 
+  ║database "Redis" as redis                                                                                                   ║ 
+  ║note across #azure: Данный файл содержит директиву ORIGINAL                                                                 ║ 
+  ║                                                                                                                            ║ 
+  ║                                                                                                                            ║ 
+  ║                                                                                                                            ║ 
+  ║== Файл для прямой конвертации ==                                                                                           ║ 
+  ║Alice -> Bob ++: Текст для стрелки                                                                                          ║ 
+  ║        hnote over Bob #lightyellow/lightgreen: <color:red><&media-play> <color:black>EVENT_NAME                            ║ 
+  ║Bob --> Alice : Text                                                                                                        ║ 
+  ║note across : Test Note                                                                                                     ║ 
+  ║                                                                                                                            ║ 
+  ║Alice -> redis : asdf                                                                                                       ║ 
+  ║legend                                                                                                                      ║ 
+  ║Карта процесса (полная)                                                                                                     ║ 
+  ║====                                                                                                                        ║ 
+  ║| Код | ИC-инициатор | ИС-исполнитель | Тип взаимодействия | Тип сценария | Метод API | Описание |                          ║ 
+  ║|---|---|---|---|---|---|---|                                                                                               ║ 
+  ║| 1 | Alice | Bob | rq | default | Текст для стрелки | Текст для таблицы |                                                  ║ 
+  ║| 2 | Bob | Alice | rs | default | Text | Comment |                                                                         ║ 
+  ║| 3 | Alice | Redis | rq | default | asdf | asdf |                                                                          ║ 
+  ║                                                                                                                            ║ 
+  ║Карта процесса (для ПроПро)                                                                                                 ║ 
+  ║====                                                                                                                        ║ 
+  ║| Код | Шаг процесса | ИC-инициатор | ИС-исполнитель | Тип взаимодействия | Описание | Наименование сущности | Метод API |  ║ 
+  ║|---|---|---|---|---|---|---|---|                                                                                           ║ 
+  ║| 1 |  | Alice | Bob | rq | Текст для таблицы | | Текст для стрелки |                                                       ║ 
+  ║| 2 |  | Bob | Alice | rs | Comment | | Text |                                                                              ║ 
+  ║| 3 |  | Alice | Redis | rq | asdf | | asdf |                                                                               ║ 
+  ║                                                                                                                            ║ 
+  ║Список доработок                                                                                                            ║ 
+  ║====                                                                                                                        ║ 
+  ║| № | id обнаружения | Суть доработки|                                                                                      ║ 
+  ║|---|---|---|                                                                                                               ║ 
+  ║| 1 | 1 | Необходимо реализовать новое событие аудита EVENT_NAME. Отправитель: Bob |                                        ║ 
+  ║                                                                                                                            ║ 
+  ║Новые события аудита                                                                                                        ║ 
+  ║====                                                                                                                        ║ 
+  ║| # | Код события | Статус | Объект | Тип события | Операция | Краткое описание | Подробное описание | Доп.параметры |      ║ 
+  ║|---|---|---|---|---|---|---|---|---|                                                                                       ║ 
+  ║| 1 | EVENT_NAME | SUCCESS \n FAILURE |  |  |  |  |  | a;sldfjasldkf |                                                      ║ 
+  ║                                                                                                                            ║ 
+  ║end legend                                                                                                                  ║ 
+  ║@enduml                                                                                                                     ║ 
+  ╚══════════════════════════════════════════════════════════════╤═╤═══════════════════════════════════════════════════════════╝ 
+                                          │Alice│               ││ ││          ,.-^^-._                                          
+                                          └─────┘               └│ │┘         |-.____.-|                                         
+                                                                 │ │          |        |                                         
+                                                                 │ │          |        |                                         
+                                                                 │ │          |        |                                         
+                                                                 │ │          '-.____.-'                                         
+                                                                 └┬┘                                                             

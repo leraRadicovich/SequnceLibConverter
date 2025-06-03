@@ -1,0 +1,33 @@
+@startuml                                                                                                                  
+autonumber
+skinparam dpi 70
+skinparam maxMessageSize 200
+skinparam backgroundColor LightGray
+skinparam sequence {
+ArrowColor blue
+ActorBorderColor blue
+LifeLineBorderColor blue
+LifeLineBackgroundColor #White
+ParticipantBorderColor blue
+ParticipantBackgroundColor DodgerBlue
+ParticipantFontName Impact
+ParticipantFontSize 17
+ParticipantFontColor #A9DCDF
+ActorBackgroundColor DodgerBlue
+ActorFontColor DeepSkyBlue
+ActorFontSize 17
+ActorFontName Aapex
+}
+title Диаграмма: <color:blue>Файл для обратной конвертации
+header <color:black>by SequenceLib.v.4.0.\n <color:black>Author: PVR
+participant "Alice" as Alice
+participant "Bob" as Bob
+database "Redis" as redis
+note across #azure: Данный файл содержит директиву ORIGINAL
+== Файл для прямой конвертации ==
+Alice -> Bob ++: Текст для стрелки
+        hnote over Bob #lightyellow/lightgreen: <color:red><&media-play> <color:black>EVENT_NAME
+Bob --> Alice : Text
+note across : Test Note
+Alice -> redis : asdf
+@enduml

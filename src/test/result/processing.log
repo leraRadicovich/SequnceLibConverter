@@ -1,0 +1,8 @@
+[2025-06-03T14:19:32.419999100] Начало обработки: C:\Users\Vpatrushev\IdeaProjects\SequnceLibConverter\src\test\Обратная конвертация с ORIGINAL директивой.puml
+[2025-06-03T14:19:32.434028700] Обработка файла: Обратная конвертация с ORIGINAL директивой.puml
+[2025-06-03T14:19:32.435028700] [Generator] Чтение файла: C:\Users\Vpatrushev\IdeaProjects\SequnceLibConverter\src\test\Обратная конвертация с ORIGINAL директивой.puml
+[2025-06-03T14:19:32.437028300] [Generator] Запуск генерации ASCII-art...
+[2025-06-03T14:19:34.105442500] [Generator] Успешная генерация. Размер результата: 14675 символов
+[2025-06-03T14:19:34.108442100] [Generator] Результат сохранен: C:\Users\Vpatrushev\IdeaProjects\SequnceLibConverter\src\test\result\Обратная конвертация с ORIGINAL директивой_unicode_ascii_result.txt
+[2025-06-03T14:19:34.125954900] Успешно обработан: Обратная конвертация с ORIGINAL директивой.puml
+[2025-06-03T14:19:34.125954900] Обработка завершена
