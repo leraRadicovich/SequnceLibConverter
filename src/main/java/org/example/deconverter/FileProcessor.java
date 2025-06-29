@@ -5,7 +5,6 @@ import java.io.PrintWriter;
 import java.io.FileWriter;
 import java.nio.file.*;
 import java.time.LocalDateTime;
-import java.util.UUID;
 import java.util.stream.Stream;
 
 public class FileProcessor implements AutoCloseable {
@@ -15,9 +14,12 @@ public class FileProcessor implements AutoCloseable {
     private final PlantUmlAsciiGenerator generator;
     private final PrintWriter logger;
     private final Path baseDir;
+    private final Path resultDir;
 
     public FileProcessor(Path baseDir) throws IOException {
         this.baseDir = baseDir;
+        this.resultDir = baseDir.resolve("result");
+        Files.createDirectories(resultDir);
         this.logger = setupLogger();
         this.generator = new PlantUmlAsciiGenerator(logger);
     }
@@ -38,7 +40,7 @@ public class FileProcessor implements AutoCloseable {
 
     private void processDirectory(Path dir) throws IOException {
         log("Сканирование директории: " + dir);
-        try (Stream<Path> stream = Files.walk(dir)) {
+        try (Stream<Path> stream = Files.list(dir)) {
             stream.filter(this::isPumlFile)
                     .forEach(this::processSingleFile);
         }
@@ -47,11 +49,10 @@ public class FileProcessor implements AutoCloseable {
     private void processSingleFile(Path pumlFile) {
         try {
             log("Обработка файла: " + pumlFile.getFileName());
-            Path resultDir = resolveOutputDir();
 
             generator.generateAsciiArt(pumlFile, resultDir);
-            renameOutputFile(pumlFile, resultDir);
-            processGeneratedFile(pumlFile, resultDir);
+            Path asciiFile = renameOutputFile(pumlFile);
+            processGeneratedFile(pumlFile, asciiFile);
 
             log("Успешно обработан: " + pumlFile.getFileName());
         } catch (Exception e) {
@@ -59,14 +60,27 @@ public class FileProcessor implements AutoCloseable {
         }
     }
 
-    private void processGeneratedFile(Path pumlFile, Path resultDir) throws IOException {
+    private void processGeneratedFile(Path pumlFile, Path asciiFile) throws IOException {
         String fileName = pumlFile.getFileName().toString();
         String baseName = fileName.substring(0, fileName.lastIndexOf('.'));
-        Path asciiFile = resultDir.resolve(baseName + OUTPUT_SUFFIX);
-        ResultParser.saveSplitResults(asciiFile, resultDir, baseName);
+
+        String targetPumlName = baseName + "_original.puml";
+        String targetMdName = baseName + "_procMap.md";
+
+        String asciiContent = Files.readString(asciiFile);
+        String diagramCode = ResultParser.extractDiagramCode(asciiContent);
+        String legendContent = ResultParser.extractLegendContent(asciiContent);
+
+        if (!diagramCode.isEmpty()) {
+            Files.writeString(resultDir.resolve(targetPumlName), diagramCode);
+        }
+
+        if (!legendContent.isEmpty()) {
+            Files.writeString(resultDir.resolve(targetMdName), legendContent);
+        }
     }
 
-    private void renameOutputFile(Path pumlFile, Path resultDir) throws IOException {
+    private Path renameOutputFile(Path pumlFile) throws IOException {
         String fileName = pumlFile.getFileName().toString();
         String baseName = fileName.substring(0, fileName.lastIndexOf('.'));
 
@@ -77,24 +91,13 @@ public class FileProcessor implements AutoCloseable {
             Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
             log("Файл переименован: " + target.getFileName());
         }
-    }
 
-    private Path resolveOutputDir() throws IOException {
-        String customDir = System.getProperty("conversion.output.dir");
-        if (customDir != null && !customDir.isBlank()) {
-            Path dir = Paths.get(customDir);
-            Files.createDirectories(dir);
-            return dir;
-        }
-        Path fallback = baseDir.resolve("result").resolve(UUID.randomUUID().toString());
-        Files.createDirectories(fallback);
-        return fallback;
+        return target;
     }
 
     private PrintWriter setupLogger() throws IOException {
-        Path resultDir = resolveOutputDir();
         Path logFile = resultDir.resolve(LOG_FILE);
-        return new PrintWriter(new FileWriter(logFile.toFile(), true), true);
+        return new PrintWriter(new FileWriter(logFile.toFile(), false), true);
     }
 
     private void log(String message) {
