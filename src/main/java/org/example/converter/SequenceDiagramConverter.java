@@ -1,10 +1,13 @@
 package org.example.converter;
 
+import org.example.config.ConversionConfig;
 import org.example.converter.helper.FileHelper;
+import org.example.converter.helper.LocalLibInstaller;
 import org.example.converter.helper.model.Box;
 import org.example.converter.helper.model.Participant;
 
 import java.io.*;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -13,29 +16,19 @@ import static org.example.constant.PatternStatic.*;
 
 public class SequenceDiagramConverter {
 
-    public void run(Path inputPath, Path outputDir) throws IOException {
+    public void run(Path inputPath, Path outputDir, ConversionConfig config) throws IOException {
         System.setProperty("conversion.output.dir", outputDir.toString());
+        System.setProperty("conversion.local.lib.apply", String.valueOf(config.applyLocalLib()));
+        System.setProperty("conversion.local.lib.update", String.valueOf(config.updateLocalLib()));
+        System.setProperty("conversion.local.lib.path", config.libDirectory());
+
+        LocalLibInstaller.installIfNeeded(
+                config.applyLocalLib(),
+                config.updateLocalLib(),
+                Path.of(config.libDirectory())
+        );
+
         runWithPath(inputPath.toFile());
-    }
-
-    public static void main(String[] args) {
-        try {
-            String pathString;
-            if (args.length == 0) {
-                Scanner scanner = new Scanner(System.in);
-                System.out.print("Enter path to .puml file or folder: ");
-                pathString = scanner.nextLine().trim();
-            } else {
-                pathString = args[0];
-            }
-
-            Path inputPath = Path.of(pathString);
-            Path outputDir = inputPath.getParent() != null ? inputPath.getParent() : Path.of(".");
-            new SequenceDiagramConverter().run(inputPath, outputDir);
-
-        } catch (IOException e) {
-            System.err.println("Error: " + e.getMessage());
-        }
     }
 
     public static void runWithPath(File path) {
@@ -51,7 +44,14 @@ public class SequenceDiagramConverter {
             return;
         }
 
-        File outputFile = FileHelper.createOutputFile(inputFile);
+        Path resultDir = inputFile.getParentFile().toPath().resolve("result");
+        try {
+            Files.createDirectories(resultDir);
+        } catch (IOException e) {
+            System.err.println("Ошибка создания папки result: " + e.getMessage());
+        }
+
+        File outputFile = resultDir.resolve(FileHelper.createOutputFile(inputFile).getName()).toFile();
         try {
             processPumlFile(inputFile, outputFile);
             System.out.println("Processed: " + inputFile.getName());
@@ -148,14 +148,29 @@ public class SequenceDiagramConverter {
                 if (!umlSectionStarted && line.equals("@startuml")) {
                     umlSectionStarted = true;
                     writer.write("@startuml\n");
-                    writer.write("!include path/to/SequenceLibIncludeFile.puml\n");
-                    writer.write("diagramInit(draft, \"" + title + "\")\n");
+                    writer.write(generateIncludeLine(title));
                     continue;
                 }
 
                 writer.write(line + "\n");
             }
         }
+    }
+
+    private static String generateIncludeLine(String diagramName) {
+        String apply = System.getProperty("conversion.local.lib.apply", "false");
+        String libPath;
+
+        if (Boolean.parseBoolean(apply)) {
+            libPath = System.getProperty("conversion.local.lib.path", "");
+        } else {
+            libPath = "libPath/lib.puml";
+        }
+
+        return "!include " + libPath + "/SequenceLibIncludeFile_v4.puml\n" +
+                "diagramInit(final, \"" + diagramName + "\")\n" +
+                "/'" + libPath + " - путь до файла библиотеки\n" +
+                diagramName + " - имя исходного файла'/\n";
     }
 
     private static String processGroup(String line) {
