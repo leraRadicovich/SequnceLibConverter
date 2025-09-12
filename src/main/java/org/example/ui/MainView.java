@@ -61,8 +61,8 @@ public class MainView extends VerticalLayout {
             }
         });
 
-        Button convertButton = new Button("Конвертировать (PUML → ASCII)");
-        Button deconvertButton = new Button("Деконвертировать (ASCII → PUML)");
+        Button convertButton = new Button("Конвертировать (ORIGINAL → LIB)");
+        Button deconvertButton = new Button("Деконвертировать (LIB → ORIGINAL)");
 
         convertButton.addClickListener(event -> handleConvert(true));
         deconvertButton.addClickListener(event -> handleConvert(false));
