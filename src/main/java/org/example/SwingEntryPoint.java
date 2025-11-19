@@ -42,14 +42,13 @@ public class SwingEntryPoint {
         topPanel.add(new JLabel("Путь до локальной библиотеки:"));
         topPanel.add(libPathField);
 
-        // Создаем горизонтальный лэйаут для метки и поля ввода пути
+        // Создаем горизонтальный лэйаут для кнопки и поля ввода пути
         JPanel pathPanel = new JPanel(new BorderLayout());
-        pathPanel.add(new JLabel("Путь к файлу или директории (.puml):"), BorderLayout.WEST);
+        JButton fileChooserButton = new JButton("Выберите файл/директорию или укажите путь вручную");
+        pathPanel.add(fileChooserButton, BorderLayout.WEST);
         pathPanel.add(pathField, BorderLayout.CENTER);
 
-        JButton fileChooserButton = new JButton("Выбрать файл/директорию или укажите путь вручную");
-        topPanel.add(fileChooserButton); // Кнопка выбора файла
-        topPanel.add(pathPanel); // Горизонтальный лэйаут с меткой и полем ввода пути
+        topPanel.add(pathPanel); // Горизонтальный лэйаут с кнопкой и полем ввода пути
 
         JPanel buttonPanel = new JPanel();
         buttonPanel.add(convertButton);
