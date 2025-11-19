@@ -89,7 +89,7 @@ public class SwingEntryPoint {
             if (isConvert) {
                 new SequenceDiagramConverter().run(inputPath, resultPath, config);
             } else {
-                try (FileProcessor processor = new FileProcessor(inputPath.getParent())) {
+                try (FileProcessor processor = new FileProcessor(inputPath.getParent(), update)) { // Передаем updateLocalLib.isSelected() как второй аргумент
                     processor.process(inputPath);
                 }
             }

@@ -6,44 +6,60 @@ import java.nio.file.Paths;
 import java.util.Scanner;
 
 public class App {
-
     public static void main(String[] args) {
-        Path inputPath = resolveInputPath(args);
-        run(inputPath);
-    }
+        // Получение пути к входному файлу или директории
+        Path inputPath = getInputPath(args);
 
-    public static void run(Path inputPath) {
-        Path baseDir = inputPath.getParent() != null ? inputPath.getParent() : Paths.get("");
-        try (FileProcessor processor = new FileProcessor(baseDir)) {
+        // Получение флага для сохранения лога
+        boolean outputLogEnabled = getOutputLogEnabled(args);
+
+        try (FileProcessor processor = new FileProcessor(inputPath.getParent(), outputLogEnabled)) {
             processor.process(inputPath);
         } catch (Exception e) {
-            System.err.println("Critical error: " + e.getMessage());
-            e.printStackTrace();
+            System.err.println("Ошибка при обработке: " + e.getMessage());
         }
     }
 
-    private static Path resolveInputPath(String[] args) {
-        if (args.length >= 1) {
-            return Paths.get(args[0]).toAbsolutePath();
+    private static Path getInputPath(String[] args) {
+        if (args.length > 0 && !args[0].equalsIgnoreCase("--log") && !args[0].equalsIgnoreCase("--nolog")) {
+            Path inputPath = Paths.get(args[0]).toAbsolutePath();
+            if (Files.exists(inputPath)) {
+                return inputPath;
+            }
+            System.err.println("Ошибка: путь не существует - " + inputPath);
         }
 
-        // Интерактивный режим
-        Scanner scanner = new Scanner(System.in);
-        while (true) {
-            System.out.println("Введите путь к файлу или папке с диаграммами (.puml или .txt):");
-            System.out.print("> ");
-            String input = scanner.nextLine().trim();
+        // Интерактивный запрос пути у пользователя
+        try (Scanner scanner = new Scanner(System.in)) {
+            while (true) {
+                System.out.println("Введите путь к файлу или папке с диаграммами (.puml):");
+                System.out.print("> ");
+                String path = scanner.nextLine().trim();
 
-            if (!input.isEmpty()) {
-                Path path = Paths.get(input).toAbsolutePath();
-                if (Files.exists(path)) {
-                    return path;
-                } else {
-                    System.err.println("Ошибка: путь не существует - " + path);
+                if (!path.isEmpty()) {
+                    Path inputPath = Paths.get(path).toAbsolutePath();
+
+                    if (Files.exists(inputPath)) {
+                        return inputPath;
+                    }
+
+                    System.err.println("Ошибка: путь не существует - " + inputPath);
                 }
-            } else {
-                System.err.println("Путь не может быть пустым");
+
+                System.err.println("Пожалуйста, введите корректный путь.");
             }
         }
+    }
+
+    private static boolean getOutputLogEnabled(String[] args) {
+        for (String arg : args) {
+            if (arg.equalsIgnoreCase("--log")) {
+                return true;
+            } else if (arg.equalsIgnoreCase("--nolog")) {
+                return false;
+            }
+        }
+        // По умолчанию возвращаем false
+        return false;
     }
 }

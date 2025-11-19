@@ -14,7 +14,7 @@ import com.vaadin.flow.component.upload.receivers.MemoryBuffer;
 import com.vaadin.flow.router.Route;
 import org.example.converter.SequenceDiagramConverter;
 import org.example.config.ConversionConfig;
-import org.example.deconverter.FileProcessor;
+import org.example.deconverter.FileProcessor; // Импорт класса FileProcessor
 import org.example.utils.FileZipper;
 
 import java.io.*;
@@ -127,7 +127,7 @@ public class MainView extends VerticalLayout {
             if (isConvert) {
                 new SequenceDiagramConverter().run(inputPath, resultPath, config);
             } else {
-                try (FileProcessor processor = new FileProcessor(inputPath.getParent())) {
+                try (FileProcessor processor = new FileProcessor(inputPath.getParent(), updateLocalLib.getValue())) {
                     processor.process(inputPath);
                 }
             }
