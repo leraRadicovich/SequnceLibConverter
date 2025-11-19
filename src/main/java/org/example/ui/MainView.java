@@ -29,6 +29,7 @@ public class MainView extends VerticalLayout {
     private final TextField libPathField = new TextField("Путь до локальной библиотеки (по умолчанию: ~/Documents/PlantUML_sequenceLib)");
     private final Checkbox applyLocalLib = new Checkbox("Применить локальную библиотеку");
     private final Checkbox updateLocalLib = new Checkbox("Обновить локальную библиотеку");
+    private final Checkbox enableLogging = new Checkbox("Включить логирование"); // Новый чекбокс для логирования
     private final TextArea logArea = new TextArea("Processing Log");
     private final Anchor downloadLink = new Anchor();
 
@@ -61,8 +62,8 @@ public class MainView extends VerticalLayout {
             }
         });
 
-        Button convertButton = new Button("Конвертировать (PUML → ASCII)");
-        Button deconvertButton = new Button("Деконвертировать (ASCII → PUML)");
+        Button convertButton = new Button("Конвертировать (origin → libSyntax)");
+        Button deconvertButton = new Button("Деконвертировать (libSyntax → origin)");
 
         convertButton.addClickListener(event -> handleConvert(true));
         deconvertButton.addClickListener(event -> handleConvert(false));
@@ -75,7 +76,7 @@ public class MainView extends VerticalLayout {
         downloadLink.getElement().setAttribute("download", true);
         downloadLink.setVisible(false);
 
-        add(instruction, pathField, upload, applyLocalLib, updateLocalLib, libPathField,
+        add(instruction, pathField, upload, applyLocalLib, updateLocalLib, enableLogging, libPathField,
                 new Hr(), new HorizontalLayout(convertButton, deconvertButton),
                 logArea, new Hr(), downloadLink);
     }
@@ -124,10 +125,12 @@ public class MainView extends VerticalLayout {
                     libDir
             );
 
+            boolean outputLogEnabled = enableLogging.getValue(); // Получаем значение нового чекбокса
+
             if (isConvert) {
                 new SequenceDiagramConverter().run(inputPath, resultPath, config);
             } else {
-                try (FileProcessor processor = new FileProcessor(inputPath.getParent(), updateLocalLib.getValue())) {
+                try (FileProcessor processor = new FileProcessor(inputPath.getParent(), outputLogEnabled)) {
                     processor.process(inputPath);
                 }
             }

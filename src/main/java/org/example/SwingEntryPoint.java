@@ -30,11 +30,13 @@ public class SwingEntryPoint {
         JButton deconvertButton = new JButton("Деконвертировать (libSyntax → origin)");
         JCheckBox applyLocalLib = new JCheckBox("Применить локальную библиотеку");
         JCheckBox updateLocalLib = new JCheckBox("Обновить локальную библиотеку");
+        JCheckBox enableLogging = new JCheckBox("Включить логирование"); // Новый чекбокс для логирования
         JTextField libPathField = new JTextField(System.getProperty("user.home") + "/Documents/PlantUML_sequenceLib");
 
-        JPanel topPanel = new JPanel(new GridLayout(5, 1));
+        JPanel topPanel = new JPanel(new GridLayout(6, 1)); // Изменено на 6 строк для нового чекбокса
         topPanel.add(applyLocalLib);
         topPanel.add(updateLocalLib);
+        topPanel.add(enableLogging); // Добавляем новый чекбокс
         topPanel.add(new JLabel("Путь до локальной библиотеки:"));
         topPanel.add(libPathField);
 
@@ -64,17 +66,17 @@ public class SwingEntryPoint {
         });
 
         convertButton.addActionListener(e -> {
-            handleConvert(true, selectedPath[0], applyLocalLib.isSelected(), updateLocalLib.isSelected(), libPathField.getText(), logArea);
+            handleConvert(true, selectedPath[0], applyLocalLib.isSelected(), updateLocalLib.isSelected(), enableLogging.isSelected(), libPathField.getText(), logArea);
         });
 
         deconvertButton.addActionListener(e -> {
-            handleConvert(false, selectedPath[0], applyLocalLib.isSelected(), updateLocalLib.isSelected(), libPathField.getText(), logArea);
+            handleConvert(false, selectedPath[0], applyLocalLib.isSelected(), updateLocalLib.isSelected(), enableLogging.isSelected(), libPathField.getText(), logArea);
         });
 
         frame.setVisible(true);
     }
 
-    private static void handleConvert(boolean isConvert, Path inputPath, boolean apply, boolean update, String libPath, JTextArea logArea) {
+    private static void handleConvert(boolean isConvert, Path inputPath, boolean apply, boolean update, boolean outputLogEnabled, String libPath, JTextArea logArea) {
         try {
             if (inputPath == null || !Files.exists(inputPath)) {
                 logArea.setText("Ошибка: путь не выбран или не существует");
@@ -89,7 +91,7 @@ public class SwingEntryPoint {
             if (isConvert) {
                 new SequenceDiagramConverter().run(inputPath, resultPath, config);
             } else {
-                try (FileProcessor processor = new FileProcessor(inputPath.getParent(), update)) { // Передаем updateLocalLib.isSelected() как второй аргумент
+                try (FileProcessor processor = new FileProcessor(inputPath.getParent(), outputLogEnabled)) { // Передаем outputLogEnabled как третий аргумент
                     processor.process(inputPath);
                 }
             }
