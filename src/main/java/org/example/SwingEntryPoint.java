@@ -26,8 +26,8 @@ public class SwingEntryPoint {
         logArea.setEditable(false);
         JScrollPane scrollPane = new JScrollPane(logArea);
 
-        JButton convertButton = new JButton("Конвертировать (PUML → ASCII)");
-        JButton deconvertButton = new JButton("Деконвертировать (ASCII → PUML)");
+        JButton convertButton = new JButton("Конвертировать (origin → libSyntax)");
+        JButton deconvertButton = new JButton("Деконвертировать (libSyntax → origin)");
         JCheckBox applyLocalLib = new JCheckBox("Применить локальную библиотеку");
         JCheckBox updateLocalLib = new JCheckBox("Обновить локальную библиотеку");
         JTextField libPathField = new JTextField(System.getProperty("user.home") + "/Documents/PlantUML_sequenceLib");
