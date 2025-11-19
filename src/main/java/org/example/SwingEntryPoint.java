@@ -10,6 +10,7 @@ import java.awt.*;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths; // Добавленный импорт
 
 public class SwingEntryPoint {
     public static void main(String[] args) {
@@ -32,16 +33,23 @@ public class SwingEntryPoint {
         JCheckBox updateLocalLib = new JCheckBox("Обновить локальную библиотеку");
         JCheckBox enableLogging = new JCheckBox("Включить логирование"); // Новый чекбокс для логирования
         JTextField libPathField = new JTextField(System.getProperty("user.home") + "/Documents/PlantUML_sequenceLib");
+        JTextField pathField = new JTextField(); // Поле ввода пути
 
-        JPanel topPanel = new JPanel(new GridLayout(6, 1)); // Изменено на 6 строк для нового чекбокса
+        JPanel topPanel = new JPanel(new GridLayout(8, 1)); // Изменено на 8 строк для нового поля ввода пути
         topPanel.add(applyLocalLib);
         topPanel.add(updateLocalLib);
         topPanel.add(enableLogging); // Добавляем новый чекбокс
         topPanel.add(new JLabel("Путь до локальной библиотеки:"));
         topPanel.add(libPathField);
 
-        JButton fileChooserButton = new JButton("Выбрать файл или директорию");
-        topPanel.add(fileChooserButton);
+        // Создаем горизонтальный лэйаут для метки и поля ввода пути
+        JPanel pathPanel = new JPanel(new BorderLayout());
+        pathPanel.add(new JLabel("Путь к файлу или директории (.puml):"), BorderLayout.WEST);
+        pathPanel.add(pathField, BorderLayout.CENTER);
+
+        JButton fileChooserButton = new JButton("Выбрать файл/директорию или укажите путь вручную");
+        topPanel.add(fileChooserButton); // Кнопка выбора файла
+        topPanel.add(pathPanel); // Горизонтальный лэйаут с меткой и полем ввода пути
 
         JPanel buttonPanel = new JPanel();
         buttonPanel.add(convertButton);
@@ -62,24 +70,25 @@ public class SwingEntryPoint {
                 File file = chooser.getSelectedFile();
                 selectedPath[0] = file.toPath();
                 logArea.setText("Выбран путь: " + file.getAbsolutePath());
+                pathField.setText(file.getAbsolutePath()); // Устанавливаем выбранный путь в поле ввода
             }
         });
 
         convertButton.addActionListener(e -> {
-            handleConvert(true, selectedPath[0], applyLocalLib.isSelected(), updateLocalLib.isSelected(), enableLogging.isSelected(), libPathField.getText(), logArea);
+            handleConvert(true, pathField.getText(), applyLocalLib.isSelected(), updateLocalLib.isSelected(), enableLogging.isSelected(), libPathField.getText(), logArea);
         });
 
         deconvertButton.addActionListener(e -> {
-            handleConvert(false, selectedPath[0], applyLocalLib.isSelected(), updateLocalLib.isSelected(), enableLogging.isSelected(), libPathField.getText(), logArea);
+            handleConvert(false, pathField.getText(), applyLocalLib.isSelected(), updateLocalLib.isSelected(), enableLogging.isSelected(), libPathField.getText(), logArea);
         });
 
         frame.setVisible(true);
     }
 
-    private static void handleConvert(boolean isConvert, Path inputPath, boolean apply, boolean update, boolean outputLogEnabled, String libPath, JTextArea logArea) {
+    private static void handleConvert(boolean isConvert, String pathText, boolean apply, boolean update, boolean outputLogEnabled, String libPath, JTextArea logArea) {
         try {
-            if (inputPath == null || !Files.exists(inputPath)) {
-                logArea.setText("Ошибка: путь не выбран или не существует");
+            Path inputPath = getPathFromText(pathText, logArea);
+            if (inputPath == null) {
                 return;
             }
 
@@ -91,7 +100,7 @@ public class SwingEntryPoint {
             if (isConvert) {
                 new SequenceDiagramConverter().run(inputPath, resultPath, config);
             } else {
-                try (FileProcessor processor = new FileProcessor(inputPath.getParent(), outputLogEnabled)) { // Передаем outputLogEnabled как третий аргумент
+                try (FileProcessor processor = new FileProcessor(inputPath.getParent(), outputLogEnabled)) {
                     processor.process(inputPath);
                 }
             }
@@ -105,5 +114,20 @@ public class SwingEntryPoint {
         } catch (Exception ex) {
             logArea.setText("Ошибка: " + ex.getMessage());
         }
+    }
+
+    private static Path getPathFromText(String pathText, JTextArea logArea) {
+        if (pathText == null || pathText.isBlank()) {
+            logArea.setText("Ошибка: путь не указан");
+            return null;
+        }
+
+        Path inputPath = Paths.get(pathText).toAbsolutePath();
+        if (!Files.exists(inputPath)) {
+            logArea.setText("Ошибка: путь не существует - " + inputPath);
+            return null;
+        }
+
+        return inputPath;
     }
 }
