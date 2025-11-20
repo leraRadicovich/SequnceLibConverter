@@ -22,6 +22,11 @@ public class SequenceDiagramConverter {
         System.setProperty("conversion.local.lib.update", String.valueOf(config.updateLocalLib()));
         System.setProperty("conversion.local.lib.path", config.libDirectory());
 
+        // Добавление логов
+        System.out.println("Apply local lib: " + config.applyLocalLib());
+        System.out.println("Update local lib: " + config.updateLocalLib());
+        System.out.println("Local lib path: " + config.libDirectory());
+
         LocalLibInstaller.installIfNeeded(
                 config.applyLocalLib(),
                 config.updateLocalLib(),
@@ -163,8 +168,10 @@ public class SequenceDiagramConverter {
 
         if (Boolean.parseBoolean(apply)) {
             libPath = System.getProperty("conversion.local.lib.path", "");
+            System.out.println("Используется локальная библиотека: " + libPath);
         } else {
             libPath = "libPath/lib.puml";
+            System.out.println("Используется стандартная библиотека: " + libPath);
         }
 
         return "!include " + libPath + "/SequenceLibIncludeFile_v4.puml\n" +

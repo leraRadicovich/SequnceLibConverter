@@ -10,7 +10,7 @@ import java.awt.*;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths; // Добавленный импорт
+import java.nio.file.Paths;
 
 public class SwingEntryPoint {
     public static void main(String[] args) {
@@ -31,24 +31,23 @@ public class SwingEntryPoint {
         JButton deconvertButton = new JButton("Деконвертировать (libSyntax → origin)");
         JCheckBox applyLocalLib = new JCheckBox("Применить локальную библиотеку");
         JCheckBox updateLocalLib = new JCheckBox("Обновить локальную библиотеку");
-        JCheckBox enableLogging = new JCheckBox("Включить логирование"); // Новый чекбокс для логирования
+        JCheckBox enableLogging = new JCheckBox("Включить логирование");
         JTextField libPathField = new JTextField(System.getProperty("user.home") + "/Documents/PlantUML_sequenceLib");
-        JTextField pathField = new JTextField(); // Поле ввода пути
+        JTextField pathField = new JTextField();
 
-        JPanel topPanel = new JPanel(new GridLayout(8, 1)); // Изменено на 8 строк для нового поля ввода пути
+        JPanel topPanel = new JPanel(new GridLayout(8, 1));
         topPanel.add(applyLocalLib);
         topPanel.add(updateLocalLib);
-        topPanel.add(enableLogging); // Добавляем новый чекбокс
+        topPanel.add(enableLogging);
         topPanel.add(new JLabel("Путь до локальной библиотеки:"));
         topPanel.add(libPathField);
 
-        // Создаем горизонтальный лэйаут для кнопки и поля ввода пути
         JPanel pathPanel = new JPanel(new BorderLayout());
         JButton fileChooserButton = new JButton("Выберите файл/директорию или укажите путь вручную");
         pathPanel.add(fileChooserButton, BorderLayout.WEST);
         pathPanel.add(pathField, BorderLayout.CENTER);
 
-        topPanel.add(pathPanel); // Горизонтальный лэйаут с кнопкой и полем ввода пути
+        topPanel.add(pathPanel);
 
         JPanel buttonPanel = new JPanel();
         buttonPanel.add(convertButton);
@@ -69,7 +68,7 @@ public class SwingEntryPoint {
                 File file = chooser.getSelectedFile();
                 selectedPath[0] = file.toPath();
                 logArea.setText("Выбран путь: " + file.getAbsolutePath());
-                pathField.setText(file.getAbsolutePath()); // Устанавливаем выбранный путь в поле ввода
+                pathField.setText(file.getAbsolutePath());
             }
         });
 
@@ -97,7 +96,8 @@ public class SwingEntryPoint {
             ConversionConfig config = new ConversionConfig(apply, update, libPath);
 
             if (isConvert) {
-                new SequenceDiagramConverter().run(inputPath, resultPath, config);
+                SequenceDiagramConverter converter = new SequenceDiagramConverter();
+                converter.run(inputPath, resultPath, config);
             } else {
                 try (FileProcessor processor = new FileProcessor(inputPath.getParent(), outputLogEnabled)) {
                     processor.process(inputPath);

@@ -9,17 +9,24 @@ public class LocalLibInstaller {
     private static final List<String> LIB_FILES = List.of("SequenceLibIncludeFile_v4.puml", "lib.puml");
 
     public static void installIfNeeded(boolean apply, boolean update, Path libPath) {
-        if (!apply) return;
+        if (!apply) {
+            System.out.println("Локальная библиотека не используется.");
+            return;
+        }
 
         boolean exists = Files.exists(libPath);
 
         if (!exists) {
+            System.out.println("Локальная библиотека не найдена по пути: " + libPath);
             createLib(libPath);
             return;
         }
 
         if (update) {
+            System.out.println("Обновление локальной библиотеки...");
             createLib(libPath);
+        } else {
+            System.out.println("Использование существующей локальной библиотеки.");
         }
     }
 
