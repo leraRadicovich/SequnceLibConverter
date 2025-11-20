@@ -32,7 +32,7 @@ public class SwingEntryPoint {
         JCheckBox applyLocalLib = new JCheckBox("Применить локальную библиотеку");
         JCheckBox updateLocalLib = new JCheckBox("Обновить локальную библиотеку");
         JCheckBox enableLogging = new JCheckBox("Включить логирование");
-        JTextField libPathField = new JTextField(System.getProperty("user.home") + "/Documents/PlantUML_sequenceLib");
+        JTextField libPathField = new JTextField(System.getProperty("user.home") + "/Documents/PlantUML_sequenceLibv1");
         JTextField pathField = new JTextField();
 
         JPanel topPanel = new JPanel(new GridLayout(8, 1));
