@@ -34,7 +34,7 @@ import '@vaadin/grid/src/vaadin-grid-column-group.js';
 import '@vaadin/grid/src/vaadin-grid.js';
 import '@vaadin/grid/src/vaadin-grid-column.js';
 import '@vaadin/grid/src/vaadin-grid-sorter.js';
-import 'Frontend/generated/jar-resources/gridConnector.ts';
+import 'Frontend/generated/jar-resources/gridConnector.js';
 import '@vaadin/tooltip/src/vaadin-tooltip.js';
 import 'Frontend/generated/jar-resources/vaadin-grid-flow-selection-column.js';
 import '@vaadin/icon/src/vaadin-icon.js';

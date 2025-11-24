@@ -11,6 +11,9 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.concurrent.TimeUnit;
 
 public class SwingEntryPoint {
     public static void main(String[] args) {
@@ -20,12 +23,14 @@ public class SwingEntryPoint {
     private static void createAndShowGUI() {
         JFrame frame = new JFrame("PlantUML Converter");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(600, 400);
+        frame.setSize(800, 500); // Увеличиваем размер окна
         frame.setLayout(new BorderLayout());
 
         JTextArea logArea = new JTextArea();
         logArea.setEditable(false);
         JScrollPane scrollPane = new JScrollPane(logArea);
+
+        JButton clearLogButton = new JButton("Очистить лог");
 
         JButton convertButton = new JButton("Конвертировать (origin → libSyntax)");
         JButton deconvertButton = new JButton("Деконвертировать (libSyntax → origin)");
@@ -35,7 +40,7 @@ public class SwingEntryPoint {
         JTextField libPathField = new JTextField(System.getProperty("user.home") + "/Documents/PlantUML_sequenceLibv1");
         JTextField pathField = new JTextField();
 
-        JPanel topPanel = new JPanel(new GridLayout(8, 1));
+        JPanel topPanel = new JPanel(new GridLayout(6, 1)); // Уменьшаем количество строк на 1
         topPanel.add(applyLocalLib);
         topPanel.add(updateLocalLib);
         topPanel.add(enableLogging);
@@ -50,12 +55,15 @@ public class SwingEntryPoint {
         topPanel.add(pathPanel);
 
         JPanel buttonPanel = new JPanel();
-        buttonPanel.add(convertButton);
         buttonPanel.add(deconvertButton);
+        buttonPanel.add(convertButton);
+        buttonPanel.add(clearLogButton); // Добавляем кнопку очистки лога в ту же панель
 
         frame.add(topPanel, BorderLayout.NORTH);
         frame.add(scrollPane, BorderLayout.CENTER);
-        frame.add(buttonPanel, BorderLayout.SOUTH);
+        frame.add(buttonPanel, BorderLayout.SOUTH); // Добавляем панель с кнопками в нижнюю часть окна
+
+        clearLogButton.addActionListener(e -> logArea.setText(""));
 
         final Path[] selectedPath = new Path[1];
 
@@ -67,7 +75,7 @@ public class SwingEntryPoint {
             if (result == JFileChooser.APPROVE_OPTION) {
                 File file = chooser.getSelectedFile();
                 selectedPath[0] = file.toPath();
-                logArea.setText("Выбран путь: " + file.getAbsolutePath());
+                logArea.append("Выбран путь: " + file.getAbsolutePath() + "\n"); // Изменяем на append
                 pathField.setText(file.getAbsolutePath());
             }
         });
@@ -95,6 +103,19 @@ public class SwingEntryPoint {
 
             ConversionConfig config = new ConversionConfig(apply, update, libPath);
 
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
+            LocalDateTime startTime = LocalDateTime.now();
+            String operationType = isConvert ? "конвертация" : "деконвертация";
+
+            // Добавление разделителя между новыми запусками
+            logArea.append("\n----------------------------------------\n");
+
+            // Запись о начале операции
+            logArea.append(String.format("Операция %s началась в %s%n", operationType, startTime.format(formatter)));
+            logArea.append(String.format("Путь до конвертируемого объекта: %s%n", inputPath));
+
+            long startTimeMillis = System.currentTimeMillis();
+
             if (isConvert) {
                 SequenceDiagramConverter converter = new SequenceDiagramConverter();
                 converter.run(inputPath, resultPath, config);
@@ -104,26 +125,34 @@ public class SwingEntryPoint {
                 }
             }
 
+            long endTimeMillis = System.currentTimeMillis();
+            long durationSeconds = TimeUnit.MILLISECONDS.toSeconds(endTimeMillis - startTimeMillis);
+            LocalDateTime endTime = LocalDateTime.now();
+
+            // Запись о завершении операции
+            logArea.append(String.format("Операция %s завершилась в %s%n", operationType, endTime.format(formatter)));
+            logArea.append(String.format("Время %s заняло %d сек.%n", operationType, durationSeconds));
+
             Path logFile = resultPath.resolve("processing.log");
             if (Files.exists(logFile)) {
-                logArea.setText(Files.readString(logFile));
+                logArea.append(Files.readString(logFile));
             } else {
-                logArea.setText("Конвертация завершена. Лог не найден.");
+                logArea.append("Лог не найден.");
             }
         } catch (Exception ex) {
-            logArea.setText("Ошибка: " + ex.getMessage());
+            logArea.append("Ошибка: " + ex.getMessage() + "\n"); // Изменяем на append
         }
     }
 
     private static Path getPathFromText(String pathText, JTextArea logArea) {
         if (pathText == null || pathText.isBlank()) {
-            logArea.setText("Ошибка: путь не указан");
+            logArea.append("Ошибка: путь не указан\n"); // Изменяем на append
             return null;
         }
 
         Path inputPath = Paths.get(pathText).toAbsolutePath();
         if (!Files.exists(inputPath)) {
-            logArea.setText("Ошибка: путь не существует - " + inputPath);
+            logArea.append("Ошибка: путь не существует - " + inputPath + "\n"); // Изменяем на append
             return null;
         }
 

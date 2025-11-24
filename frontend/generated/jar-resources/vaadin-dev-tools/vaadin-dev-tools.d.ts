@@ -1,11 +1,11 @@
 import 'construct-style-sheets-polyfill';
 import { LitElement, PropertyValueMap, TemplateResult } from 'lit';
-import { Product } from './License';
-import { ConnectionStatus } from './connection';
 import './theme-editor/editor';
 import { ThemeEditorState } from './theme-editor/model';
-import './vaadin-dev-tools-info';
+import { Product } from './License';
+import { ConnectionStatus } from './connection';
 import './vaadin-dev-tools-log';
+import './vaadin-dev-tools-info';
 /**
  * Plugin API for the dev tools window.
  */
@@ -146,7 +146,8 @@ export declare class VaadinDevTools extends LitElement {
     protected updated(_changedProperties: PropertyValueMap<any> | Map<PropertyKey, unknown>): void;
     renderCode(): TemplateResult<1>;
     private renderFeatures;
-    setJavaLiveReloadActive(active: boolean): void;
+    disableJavaLiveReload(): void;
+    enableJavaLiveReload(): void;
     renderThemeEditor(): TemplateResult<1>;
     toggleFeatureFlag(e: Event, feature: Feature): void;
 }
