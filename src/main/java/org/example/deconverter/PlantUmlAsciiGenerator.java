@@ -22,6 +22,13 @@ public class PlantUmlAsciiGenerator {
         log("Чтение файла: " + inputFile);
         String source = new String(Files.readAllBytes(inputFile), StandardCharsets.UTF_8);
 
+        // Проверка наличия директивы !include
+        if (!source.contains("!include")) {
+            String diagramName = inputFile.getFileName().toString().replace(".puml", "");
+            String includeLine = generateIncludeLine(diagramName);
+            source = includeLine + source;
+        }
+
         log("Запуск генерации ASCII-art...");
         SourceStringReader reader = new SourceStringReader(source);
         ByteArrayOutputStream os = new ByteArrayOutputStream();
@@ -40,6 +47,24 @@ public class PlantUmlAsciiGenerator {
 
         Files.write(outputFile, result.getBytes(StandardCharsets.UTF_8), StandardOpenOption.CREATE);
         log("Результат сохранен: " + outputFile);
+    }
+
+    private String generateIncludeLine(String diagramName) {
+        String apply = System.getProperty("conversion.local.lib.apply", "false");
+        String libPath;
+
+        if (Boolean.parseBoolean(apply)) {
+            libPath = System.getProperty("conversion.local.lib.path", "");
+            System.out.println("Используется локальная библиотека: " + libPath);
+        } else {
+            libPath = "libPath/lib.puml";
+            System.out.println("Используется стандартная библиотека: " + libPath);
+        }
+
+        return "!include " + libPath + "/SequenceLibIncludeFile_v4.puml\n" +
+                "diagramInit(final, \"" + diagramName + "\")\n" +
+                "/'" + libPath + " - путь до файла библиотеки\n" +
+                diagramName + " - имя исходного файла'/\n";
     }
 
     private void log(String message) {

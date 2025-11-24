@@ -9,44 +9,55 @@
     <version>0.0.1</version>
     <packaging>jar</packaging>
 
+    <name>plantuml-ui</name>
+    <description>Demo project for Spring Boot</description>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.1.5</version>
+        <relativePath/> <!-- lookup parent from repository -->
+    </parent>
+
     <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
-        <spring.version>3.4.3</spring.version>
-        <vaadin.version>24.3.5</vaadin.version>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <java.version>17</java.version>
+        <vaadin.version>24.3.0</vaadin.version>
     </properties>
 
     <dependencies>
-        <!-- Основной Web стартер -->
+        <!-- Зависимости для Spring Web -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
-            <version>${spring.version}</version>
         </dependency>
 
-        <!-- Vaadin UI -->
+        <!-- Другие зависимости -->
+        <dependency>
+            <groupId>net.sourceforge.plantuml</groupId>
+            <artifactId>plantuml-gplv2</artifactId>
+            <version>1.2025.0</version>
+        </dependency>
+
+        <!-- Зависимости для Vaadin -->
+        <dependency>
+            <groupId>com.vaadin</groupId>
+            <artifactId>vaadin-core</artifactId>
+            <version>${vaadin.version}</version>
+        </dependency>
         <dependency>
             <groupId>com.vaadin</groupId>
             <artifactId>vaadin-spring-boot-starter</artifactId>
             <version>${vaadin.version}</version>
         </dependency>
-
-        <!-- PlantUML (локальный JAR) -->
         <dependency>
-            <groupId>net.sourceforge.plantuml</groupId>
-            <artifactId>plantuml-gplv2-1.2025.0</artifactId>
-            <version>1.2025.0</version>
-            <scope>system</scope>
-            <systemPath>${project.basedir}/lib/plantuml-gplv2-1.2025.0.jar</systemPath>
+            <groupId>com.vaadin</groupId>
+            <artifactId>vaadin-lumo-theme</artifactId>
+            <version>${vaadin.version}</version>
         </dependency>
-
-        <!-- Поддержка аннотаций конфигурации -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-configuration-processor</artifactId>
-            <optional>true</optional>
-            <version>${spring.version}</version>
+            <groupId>com.vaadin</groupId>
+            <artifactId>vaadin-material-theme</artifactId>
+            <version>${vaadin.version}</version>
         </dependency>
     </dependencies>
 
@@ -55,8 +66,18 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>3.1.5</version>
+                <configuration>
+                    <mainClass>org.example.SwingEntryPoint</mainClass>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
-
 </project>
