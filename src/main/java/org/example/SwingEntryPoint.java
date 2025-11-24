@@ -44,11 +44,26 @@ public class SwingEntryPoint {
         topPanel.add(applyLocalLib);
         topPanel.add(updateLocalLib);
         topPanel.add(enableLogging);
-        topPanel.add(new JLabel("Путь до локальной библиотеки:"));
-        topPanel.add(libPathField);
+
+        // Панель для выбора пути до локальной библиотеки
+        JPanel libPathPanel = new JPanel(new BorderLayout());
+        JButton libPathButton = new JButton("Путь до локальной библиотеки"); // Кнопка с текстом "Путь до локальной библиотеки"
+        libPathButton.addActionListener(e -> {
+            JFileChooser chooser = new JFileChooser();
+            chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+            int result = chooser.showOpenDialog(frame);
+            if (result == JFileChooser.APPROVE_OPTION) {
+                File file = chooser.getSelectedFile();
+                libPathField.setText(file.getAbsolutePath());
+            }
+        });
+        libPathPanel.add(libPathButton, BorderLayout.WEST); // Кнопка слева
+        libPathPanel.add(libPathField, BorderLayout.CENTER); // Поле ввода справа
+
+        topPanel.add(libPathPanel);
 
         JPanel pathPanel = new JPanel(new BorderLayout());
-        JButton fileChooserButton = new JButton("Выберите файл/директорию или укажите путь вручную");
+        JButton fileChooserButton = new JButton("Путь до файла/директории");
         pathPanel.add(fileChooserButton, BorderLayout.WEST);
         pathPanel.add(pathField, BorderLayout.CENTER);
 
@@ -59,8 +74,16 @@ public class SwingEntryPoint {
         buttonPanel.add(convertButton);
         buttonPanel.add(clearLogButton); // Добавляем кнопку очистки лога в ту же панель
 
+        // Создание заголовка для области вывода
+        JLabel resultLabel = new JLabel("Результат конвертации");
+
+        // Добавление заголовка и области вывода в центральную панель
+        JPanel centerPanel = new JPanel(new BorderLayout());
+        centerPanel.add(resultLabel, BorderLayout.NORTH);
+        centerPanel.add(scrollPane, BorderLayout.CENTER);
+
         frame.add(topPanel, BorderLayout.NORTH);
-        frame.add(scrollPane, BorderLayout.CENTER);
+        frame.add(centerPanel, BorderLayout.CENTER); // Добавляем панель с заголовком и логом в центральную часть окна
         frame.add(buttonPanel, BorderLayout.SOUTH); // Добавляем панель с кнопками в нижнюю часть окна
 
         clearLogButton.addActionListener(e -> logArea.setText(""));
