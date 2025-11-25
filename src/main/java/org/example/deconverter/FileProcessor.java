@@ -1,10 +1,16 @@
 package org.example.deconverter;
 
+import org.example.config.ConversionConfig;
+import org.example.converter.helper.EmbeddedLibInstaller;
+import org.example.converter.helper.PumlFileModifier;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.FileWriter;
 import java.nio.file.*;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.stream.Stream;
 
 public class FileProcessor implements AutoCloseable {
@@ -16,6 +22,8 @@ public class FileProcessor implements AutoCloseable {
     private PrintWriter logger;
     private final Path baseDir;
     private final boolean outputLogEnabled;
+    private final ConversionConfig config;
+    private final Map<Path, Path> backupFiles = new HashMap<>();
 
     /**
      * Конструктор класса FileProcessor.
@@ -24,12 +32,14 @@ public class FileProcessor implements AutoCloseable {
      * @param outputLogEnabled Флаг, определяющий, следует ли сохранять лог.
      *                         Если true, лог сохраняется всегда.
      *                         Если false, лог сохраняется только при возникновении ошибок.
+     * @param config           Конфигурация конвертации
      * @throws IOException Если произошла ошибка при настройке логгера.
      */
-    public FileProcessor(Path baseDir, boolean outputLogEnabled) throws IOException {
+    public FileProcessor(Path baseDir, boolean outputLogEnabled, ConversionConfig config) throws IOException {
         this.baseDir = baseDir;
         this.outputLogEnabled = outputLogEnabled;
-        this.generator = new PlantUmlAsciiGenerator(null); // Изначально передаем null
+        this.config = config;
+        this.generator = new PlantUmlAsciiGenerator(null, config); // Передаем config
     }
 
     public void process(Path inputPath) throws IOException {
@@ -57,6 +67,31 @@ public class FileProcessor implements AutoCloseable {
         try {
             log("Обработка файла: " + pumlFile.getFileName());
             Path resultDir = createResultDir(pumlFile.getParent());
+
+            // Если не применяем локальную библиотеку, нужно модифицировать файлы
+            if (!config.applyLocalLib() && config.libDirectory() != null) {
+                // Создаем резервную копию
+                Path backup = PumlFileModifier.createBackup(pumlFile);
+                backupFiles.put(pumlFile, backup);
+                
+                // Вычисляем путь к библиотеке
+                Path libPath = Paths.get(config.libDirectory()).resolve("sequenceLibPuml/SequenceLibIncludeFile_v4.puml");
+                Path pumlPath = pumlFile.getParent();
+                
+                String includePath;
+                try {
+                    // Пытаемся использовать относительный путь
+                    Path relativePath = pumlPath.relativize(libPath);
+                    includePath = relativePath.toString().replace("\\", "/");
+                } catch (IllegalArgumentException e) {
+                    // Если не получается (разные диски в Windows), используем абсолютный путь
+                    includePath = libPath.toAbsolutePath().toString().replace("\\", "/");
+                }
+                
+                // Модифицируем файл: комментируем include и добавляем новый
+                PumlFileModifier.modifyIncludeStatements(pumlFile, includePath);
+                log("Файл модифицирован: закомментированы существующие include, добавлен новый путь: " + includePath);
+            }
 
             // Генерация ASCII-арта
             generator.generateAsciiArt(pumlFile, resultDir);
@@ -144,6 +179,17 @@ public class FileProcessor implements AutoCloseable {
 
     @Override
     public void close() {
+        // Восстанавливаем оригинальные файлы из резервных копий
+        for (Map.Entry<Path, Path> entry : backupFiles.entrySet()) {
+            try {
+                PumlFileModifier.restoreFromBackup(entry.getKey(), entry.getValue());
+                Files.deleteIfExists(entry.getValue()); // Удаляем резервную копию
+                log("Восстановлен оригинальный файл: " + entry.getKey().getFileName());
+            } catch (IOException e) {
+                System.err.println("Ошибка восстановления файла " + entry.getKey() + ": " + e.getMessage());
+            }
+        }
+        
         if (logger != null) {
             logger.close();
         }

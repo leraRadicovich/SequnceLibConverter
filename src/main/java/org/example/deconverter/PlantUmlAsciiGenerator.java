@@ -1,5 +1,6 @@
 package org.example.deconverter;
 
+import org.example.config.ConversionConfig;
 import net.sourceforge.plantuml.FileFormat;
 import net.sourceforge.plantuml.FileFormatOption;
 import net.sourceforge.plantuml.SourceStringReader;
@@ -13,20 +14,22 @@ import java.time.LocalDateTime;
 
 public class PlantUmlAsciiGenerator {
     private final PrintWriter logger;
+    private final ConversionConfig config;
 
-    public PlantUmlAsciiGenerator(PrintWriter logger) {
+    public PlantUmlAsciiGenerator(PrintWriter logger, ConversionConfig config) {
         this.logger = logger;
+        this.config = config;
     }
 
     public void generateAsciiArt(Path inputFile, Path outputDir) throws Exception {
         log("Чтение файла: " + inputFile);
         String source = new String(Files.readAllBytes(inputFile), StandardCharsets.UTF_8);
 
-        // Проверка наличия директивы !include
-        if (!source.contains("!include")) {
-            String diagramName = inputFile.getFileName().toString().replace(".puml", "");
-            String includeLine = generateIncludeLine(diagramName);
-            source = includeLine + source;
+        // Если применяем локальную библиотеку, не изменяем исходный файл
+        // Файл уже должен содержать правильные include директивы
+        if (!config.applyLocalLib()) {
+            // Если не применяем локальную библиотеку, файл уже модифицирован в FileProcessor
+            // Здесь просто используем его как есть
         }
 
         log("Запуск генерации ASCII-art...");
@@ -49,23 +52,6 @@ public class PlantUmlAsciiGenerator {
         log("Результат сохранен: " + outputFile);
     }
 
-    private String generateIncludeLine(String diagramName) {
-        String apply = System.getProperty("conversion.local.lib.apply", "false");
-        String libPath;
-
-        if (Boolean.parseBoolean(apply)) {
-            libPath = System.getProperty("conversion.local.lib.path", "");
-            System.out.println("Используется локальная библиотека: " + libPath);
-        } else {
-            libPath = "libPath/lib.puml";
-            System.out.println("Используется стандартная библиотека: " + libPath);
-        }
-
-        return "!include " + libPath + "/SequenceLibIncludeFile_v4.puml\n" +
-                "diagramInit(final, \"" + diagramName + "\")\n" +
-                "/'" + libPath + " - путь до файла библиотеки\n" +
-                diagramName + " - имя исходного файла'/\n";
-    }
 
     private void log(String message) {
         String entry = "[" + LocalDateTime.now() + "] [Generator] " + message;

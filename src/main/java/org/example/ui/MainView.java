@@ -26,7 +26,6 @@ import java.util.UUID;
 public class MainView extends VerticalLayout {
 
     private final TextField pathField = new TextField("Путь к файлу или папке (.puml)");
-    private final TextField libPathField = new TextField("Путь до локальной библиотеки (по умолчанию: ~/Documents/PlantUML_sequenceLib)");
     private final Checkbox applyLocalLib = new Checkbox("Применить локальную библиотеку");
     private final Checkbox updateLocalLib = new Checkbox("Обновить локальную библиотеку");
     private final Checkbox enableLogging = new Checkbox("Включить логирование"); // Новый чекбокс для логирования
@@ -44,9 +43,6 @@ public class MainView extends VerticalLayout {
 
         pathField.setPlaceholder("или введите путь вручную...");
         pathField.setWidthFull();
-
-        libPathField.setPlaceholder("~/Documents/PlantUML_sequenceLib");
-        libPathField.setWidthFull();
 
         MemoryBuffer buffer = new MemoryBuffer();
         Upload upload = new Upload(buffer);
@@ -76,7 +72,7 @@ public class MainView extends VerticalLayout {
         downloadLink.getElement().setAttribute("download", true);
         downloadLink.setVisible(false);
 
-        add(instruction, pathField, upload, applyLocalLib, updateLocalLib, enableLogging, libPathField,
+        add(instruction, pathField, upload, applyLocalLib, updateLocalLib, enableLogging,
                 new Hr(), new HorizontalLayout(convertButton, deconvertButton),
                 logArea, new Hr(), downloadLink);
     }
@@ -114,8 +110,24 @@ public class MainView extends VerticalLayout {
             System.setOut(logStream);
             System.setErr(logStream);
 
-            String libDir = libPathField.getValue();
-            if (libDir == null || libDir.isBlank()) {
+            String libDir = null;
+            if (updateLocalLib.getValue()) {
+                // Для веб-интерфейса пока используем временную директорию, так как нет диалога выбора
+                // В реальном приложении нужно использовать Vaadin Upload или другой механизм
+                libDir = System.getProperty("java.io.tmpdir") + "/PlantUML_sequenceLib";
+                try {
+                    org.example.converter.helper.EmbeddedLibInstaller.copyEmbeddedLibrary(Path.of(libDir));
+                    logArea.setValue("Локальная библиотека обновлена в: " + libDir);
+                } catch (Exception e) {
+                    logArea.setValue("Ошибка обновления библиотеки: " + e.getMessage());
+                    return;
+                }
+            } else if (!applyLocalLib.getValue() && !isConvert) {
+                // Для деконвертации без применения локальной библиотеки
+                libDir = System.getProperty("java.io.tmpdir") + "/PlantUML_sequenceLib";
+                logArea.setValue("ВНИМАНИЕ: Для веб-интерфейса библиотека будет сохранена во временную директорию: " + libDir);
+            } else if (applyLocalLib.getValue() && libDir == null) {
+                // Если применяем локальную библиотеку, но путь не указан, используем путь по умолчанию
                 libDir = System.getProperty("user.home") + "/Documents/PlantUML_sequenceLib";
             }
 
@@ -130,7 +142,18 @@ public class MainView extends VerticalLayout {
             if (isConvert) {
                 new SequenceDiagramConverter().run(inputPath, resultPath, config);
             } else {
-                try (FileProcessor processor = new FileProcessor(inputPath.getParent(), outputLogEnabled)) {
+                // Для деконвертации: если не применяем локальную библиотеку, копируем встроенную библиотеку
+                if (!applyLocalLib.getValue() && libDir != null) {
+                    try {
+                        org.example.converter.helper.EmbeddedLibInstaller.copyEmbeddedLibrary(Path.of(libDir));
+                        logArea.setValue("Встроенная библиотека скопирована в: " + libDir);
+                    } catch (Exception e) {
+                        logArea.setValue("Ошибка копирования библиотеки: " + e.getMessage());
+                        return;
+                    }
+                }
+                
+                try (FileProcessor processor = new FileProcessor(inputPath.getParent(), outputLogEnabled, config)) {
                     processor.process(inputPath);
                 }
             }

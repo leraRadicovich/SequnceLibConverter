@@ -37,30 +37,12 @@ public class SwingEntryPoint {
         JCheckBox applyLocalLib = new JCheckBox("Применить локальную библиотеку");
         JCheckBox updateLocalLib = new JCheckBox("Обновить локальную библиотеку");
         JCheckBox enableLogging = new JCheckBox("Включить логирование");
-        JTextField libPathField = new JTextField(System.getProperty("user.home") + "/Documents/PlantUML_sequenceLibv1");
         JTextField pathField = new JTextField();
 
-        JPanel topPanel = new JPanel(new GridLayout(6, 1)); // Уменьшаем количество строк на 1
+        JPanel topPanel = new JPanel(new GridLayout(4, 1));
         topPanel.add(applyLocalLib);
         topPanel.add(updateLocalLib);
         topPanel.add(enableLogging);
-
-        // Панель для выбора пути до локальной библиотеки
-        JPanel libPathPanel = new JPanel(new BorderLayout());
-        JButton libPathButton = new JButton("Путь до локальной библиотеки"); // Кнопка с текстом "Путь до локальной библиотеки"
-        libPathButton.addActionListener(e -> {
-            JFileChooser chooser = new JFileChooser();
-            chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-            int result = chooser.showOpenDialog(frame);
-            if (result == JFileChooser.APPROVE_OPTION) {
-                File file = chooser.getSelectedFile();
-                libPathField.setText(file.getAbsolutePath());
-            }
-        });
-        libPathPanel.add(libPathButton, BorderLayout.WEST); // Кнопка слева
-        libPathPanel.add(libPathField, BorderLayout.CENTER); // Поле ввода справа
-
-        topPanel.add(libPathPanel);
 
         JPanel pathPanel = new JPanel(new BorderLayout());
         JButton fileChooserButton = new JButton("Путь до файла/директории");
@@ -104,17 +86,17 @@ public class SwingEntryPoint {
         });
 
         convertButton.addActionListener(e -> {
-            handleConvert(true, pathField.getText(), applyLocalLib.isSelected(), updateLocalLib.isSelected(), enableLogging.isSelected(), libPathField.getText(), logArea);
+            handleConvert(true, pathField.getText(), applyLocalLib.isSelected(), updateLocalLib.isSelected(), enableLogging.isSelected(), logArea, frame);
         });
 
         deconvertButton.addActionListener(e -> {
-            handleConvert(false, pathField.getText(), applyLocalLib.isSelected(), updateLocalLib.isSelected(), enableLogging.isSelected(), libPathField.getText(), logArea);
+            handleConvert(false, pathField.getText(), applyLocalLib.isSelected(), updateLocalLib.isSelected(), enableLogging.isSelected(), logArea, frame);
         });
 
         frame.setVisible(true);
     }
 
-    private static void handleConvert(boolean isConvert, String pathText, boolean apply, boolean update, boolean outputLogEnabled, String libPath, JTextArea logArea) {
+    private static void handleConvert(boolean isConvert, String pathText, boolean apply, boolean update, boolean outputLogEnabled, JTextArea logArea, JFrame frame) {
         try {
             Path inputPath = getPathFromText(pathText, logArea);
             if (inputPath == null) {
@@ -123,6 +105,43 @@ public class SwingEntryPoint {
 
             Path resultPath = inputPath.getParent().resolve("result");
             Files.createDirectories(resultPath);
+
+            String libPath = null;
+            if (update) {
+                // Спрашиваем путь для обновления локальной библиотеки
+                JFileChooser chooser = new JFileChooser();
+                chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+                chooser.setDialogTitle("Выберите директорию для сохранения локальной библиотеки");
+                int result = chooser.showOpenDialog(frame);
+                if (result == JFileChooser.APPROVE_OPTION) {
+                    libPath = chooser.getSelectedFile().getAbsolutePath();
+                    try {
+                        org.example.converter.helper.EmbeddedLibInstaller.copyEmbeddedLibrary(Paths.get(libPath));
+                        logArea.append("Локальная библиотека обновлена в: " + libPath + "\n");
+                    } catch (Exception e) {
+                        logArea.append("Ошибка обновления библиотеки: " + e.getMessage() + "\n");
+                        return;
+                    }
+                } else {
+                    logArea.append("Операция отменена пользователем\n");
+                    return;
+                }
+            } else if (!apply && !isConvert) {
+                // Для деконвертации без применения локальной библиотеки спрашиваем куда сохранить встроенную библиотеку
+                JFileChooser chooser = new JFileChooser();
+                chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+                chooser.setDialogTitle("Выберите директорию для сохранения встроенной библиотеки");
+                int result = chooser.showOpenDialog(frame);
+                if (result == JFileChooser.APPROVE_OPTION) {
+                    libPath = chooser.getSelectedFile().getAbsolutePath();
+                } else {
+                    logArea.append("Операция отменена пользователем\n");
+                    return;
+                }
+            } else if (apply && libPath == null) {
+                // Если применяем локальную библиотеку, но путь не указан, используем путь по умолчанию
+                libPath = System.getProperty("user.home") + "/Documents/PlantUML_sequenceLib";
+            }
 
             ConversionConfig config = new ConversionConfig(apply, update, libPath);
 
@@ -143,7 +162,18 @@ public class SwingEntryPoint {
                 SequenceDiagramConverter converter = new SequenceDiagramConverter();
                 converter.run(inputPath, resultPath, config);
             } else {
-                try (FileProcessor processor = new FileProcessor(inputPath.getParent(), outputLogEnabled)) {
+                // Для деконвертации: если не применяем локальную библиотеку, копируем встроенную библиотеку
+                if (!apply && libPath != null) {
+                    try {
+                        org.example.converter.helper.EmbeddedLibInstaller.copyEmbeddedLibrary(Paths.get(libPath));
+                        logArea.append("Встроенная библиотека скопирована в: " + libPath + "\n");
+                    } catch (Exception e) {
+                        logArea.append("Ошибка копирования библиотеки: " + e.getMessage() + "\n");
+                        return;
+                    }
+                }
+                
+                try (FileProcessor processor = new FileProcessor(inputPath.getParent(), outputLogEnabled, config)) {
                     processor.process(inputPath);
                 }
             }

@@ -27,11 +27,13 @@ public class SequenceDiagramConverter {
         System.out.println("Update local lib: " + config.updateLocalLib());
         System.out.println("Local lib path: " + config.libDirectory());
 
-        LocalLibInstaller.installIfNeeded(
-                config.applyLocalLib(),
-                config.updateLocalLib(),
-                Path.of(config.libDirectory())
-        );
+        if (config.libDirectory() != null) {
+            LocalLibInstaller.installIfNeeded(
+                    config.applyLocalLib(),
+                    config.updateLocalLib(),
+                    Path.of(config.libDirectory())
+            );
+        }
 
         runWithPath(inputPath.toFile());
     }
