@@ -1,15 +1,9 @@
 @startuml
-!unquoted procedure ORIGINAL()
-    %invoke_procedure("originalSyntaxController")
-!endprocedure
-
 /'Построение диаграммы в оригинальном синтаксисе'/
-!unquoted procedure originalSyntaxController()
+!unquoted procedure ORIGINAL()
 !$deviderEnabled = 1
-!if $diagramMode == "draft"
-!assert Генерация диаграммы в оригинальном синтаксисе доступна в режиме final
-!endif
 note across
+!if $diagramMode == "final"
 /'Cтарт и стиль'/
 %string("@"+"startuml")
 
@@ -18,7 +12,7 @@ note across
 
 /'Вывод заголовки и хедера диаграммы'/
 title Диаграмма: <color:blue>$sequenceName
-header <color:black>by SequenceLib.v.4.0.(inConverter)\n <color:black>Author: PVR
+header <color:black>with <color:blue>SequenceLib.v.4.0.<color:black> by PVR $originalBy
 
 /'Участники и объединение в бокси'/
 !foreach $item in $currentAliasMap
@@ -29,43 +23,48 @@ header <color:black>by SequenceLib.v.4.0.(inConverter)\n <color:black>Author: PV
 /'Боксы'/
 !foreach $item in $originalSyntaxMap
 !if $item.type == "box"
-
 %invoke_procedure("BOX", $item.name, $item.color, $item.parties)
 !endif
     /'Стрелки'/
 !if $item.type == "action"
-%invoke_procedure("actionBuilder", $item.initiator, $item.executor, $item.liveLine, $item.action, $item.subtype, $item.layer)
+$tabMap[$item.layerId]%invoke_procedure("actionBuilder", $item.subtype, $item.initiator, $item.executor, $item.liveLine, $item.action)
+!endif
+    /'Зависимости'/
+!if $item.type == "dependency"
+$tabMap[$item.layerId]%invoke_procedure("dependencyBuilder", $item.source)
 !endif
     /'Слои'/
 !if $item.type == "layer"
-%invoke_procedure("layerBuilder", $item.subtype, $item.color, $item.description)
+$tabMap[$item.layerId]%invoke_procedure("layerBuilder", $item.subtype, $item.color, $item.description)
 !endif
     /'Заметки'/
 !if $item.type == "noteAndRef"
 !if $item.subtype == "note"
 !$color = colorController($item.color)
-%invoke_procedure("noteBuilder", $item.subtype, $item.position1, $item.position2, $color, $item.description)
+$tabMap[$item.layerId]%invoke_procedure("noteBuilder", $item.subtype, $item.position1, $item.position2, $color, $item.description)
 !else
 !$subtype = $item.subtype
 !$color = colorController($item.color)
-'!$color = colorController($color)
 !$subtype = "ref" + $color
 !$color = ""
-%invoke_procedure("refBuilder", $subtype, $item.position1, $item.position2, $color, $item.description)
+$tabMap[$item.layerId]%invoke_procedure("refBuilder", $subtype, $item.position1, $item.position2, $color, $item.description)
 !endif
 !endif
     /'Аудит'/
 !if $item.type == "audit"
-%invoke_procedure("auditBuilder", $item.name, $item.status, $item.source)
+$tabMap[$item.layerId]%invoke_procedure("auditBuilder", $item.name, $item.status, $item.source)
 !endif
     /'Общие функции'/
 !if $item.type == "activate" || $item.type == "deactivate" || $item.type == "separator"
-%invoke_procedure("commonBuilder", $item.type, $item.value)
+$tabMap[$item.layerId]%invoke_procedure("commonBuilder", $item.type, $item.value)
 !endif
 !endfor
 /'Легенда'/
 %invoke_procedure("LEGEND")
 /'Конец диаграммы'/
 %string("@"+"enduml")
+!else
+** Генерация диаграммы в оригинальном синтаксисе доступна в режиме final **
+!endif
 end note
 !endprocedure

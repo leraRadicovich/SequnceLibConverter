@@ -1,0 +1,51 @@
+@startuml
+/'Список зависимостей'/
+!unquoted procedure dependFrom($source="", $point="", $requirements="", $rds="", $duty="", $comment="", $status="")
+    !if $source == ""
+        !$i = $id - 1
+        !$i = $linkOnOriginalSyntaxMap[$i]
+        !$source = $originalSyntaxMap[$i].executor
+    !endif
+    !if $diagramMode == "final"
+        !$temp = {}
+        !$temp = %json_add($temp, "id", $id)
+          !$temp = %json_add($temp, "source", $source)
+        !$temp = %json_add($temp, "point", $point)
+        !$temp = %json_add($temp, "requirements", $requirements)
+        !$temp = %json_add($temp, "rds", $rds)
+        !$temp = %json_add($temp, "duty", $duty)
+        !$temp = %json_add($temp, "comment", $comment)
+        !$temp = %json_add($temp, "status", $status)
+        !$dependencyMap = %json_add($dependencyMap, $temp)
+        !if $status == ""
+            %invoke_procedure("setOriginalSyntaxDependency", $source)
+            %invoke_procedure("dependencyBuilder", $source)
+        !endif
+    !endif
+!endprocedure
+
+!unquoted procedure setOriginalSyntaxDependency($source)
+    !if $diagramMode == "final"
+    !$temp = {}
+    !$temp = %json_add($temp, "type", "dependency")
+    !$temp = %json_add($temp, "layerId", $layerId)
+    !$temp = %json_add($temp, "source", $source)
+    !$originalSyntaxMap = %json_add($originalSyntaxMap, $temp)
+    !$techId = $techId + 1
+    !endif
+!endprocedure
+
+!unquoted procedure dependencyBuilder($source)
+hnote over $source #orange: <size:15><color:red><&fire> <color:black> **ЗАВИСИМОСТЬ** <&fire>
+!endprocedure
+
+/'Построение строки со списком доработок'/
+!unquoted procedure $dependencyRawBuilder()
+    !$i = 0
+    !foreach $item in $dependencyMap
+    !$i = $i + 1
+| $i | $item.id | $item.source | $item.point | $item.requirements | $item.rds | $item.duty | $item.comment | $item.status |
+    !endfor
+!endprocedure
+/'TODO карта зависимостей строится некорректно, но конвертером обрабатывается'/
+
