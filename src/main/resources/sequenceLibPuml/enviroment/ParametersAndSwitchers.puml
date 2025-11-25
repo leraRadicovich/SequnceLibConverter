@@ -80,5 +80,5 @@
 "|--|--|--|"]
 
 /'Карта зависимостей'/
-!$dependencyMapHead = ["| id | source | point | requirements | rds | duty | comment | status |",
-"|------|--------|-------|--------------|-----|------|---------|--------|"]
+!$dependencyMapHead = ["| i | id | source | point | requirements | rds | duty | comment | status |",
+"|------|------|--------|-------|--------------|-----|------|---------|--------|"]
