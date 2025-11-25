@@ -18,7 +18,7 @@ note across
 
 /'Вывод заголовки и хедера диаграммы'/
 title Диаграмма: <color:blue>$sequenceName
-header <color:black>by SequenceLib.v.4.0.\n <color:black>Author: PVR
+header <color:black>by SequenceLib.v.4.0.(inConverter)\n <color:black>Author: PVR
 
 /'Участники и объединение в бокси'/
 !foreach $item in $currentAliasMap

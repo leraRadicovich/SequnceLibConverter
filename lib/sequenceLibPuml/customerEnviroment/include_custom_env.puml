@@ -1,7 +1,0 @@
-@startuml
-!include customAliasMap.puml
-!include customAuditMap.puml
-!include customConfigMap.puml
-!include customMetricMap.puml
-!include customErrorMap.puml
-!include partyTypes.puml
