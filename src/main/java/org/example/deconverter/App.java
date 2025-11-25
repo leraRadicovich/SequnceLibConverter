@@ -1,5 +1,6 @@
 package org.example.deconverter;
 
+import org.example.config.ConversionConfig;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -13,7 +14,10 @@ public class App {
         // Получение флага для сохранения лога
         boolean outputLogEnabled = getOutputLogEnabled(args);
 
-        try (FileProcessor processor = new FileProcessor(inputPath.getParent(), outputLogEnabled)) {
+        // Создаем конфигурацию с дефолтными значениями для консольного приложения
+        ConversionConfig config = new ConversionConfig(false, false, null);
+
+        try (FileProcessor processor = new FileProcessor(inputPath.getParent(), outputLogEnabled, config)) {
             processor.process(inputPath);
         } catch (Exception e) {
             System.err.println("Ошибка при обработке: " + e.getMessage());
