@@ -3,6 +3,8 @@ package org.example;
 import org.example.converter.SequenceDiagramConverter;
 import org.example.config.ConversionConfig;
 import org.example.deconverter.FileProcessor;
+import org.example.service.ConversionLogService;
+import org.example.service.LibraryService;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -11,8 +13,6 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.concurrent.TimeUnit;
 
 public class SwingEntryPoint {
@@ -106,6 +106,9 @@ public class SwingEntryPoint {
             Path resultPath = inputPath.getParent().resolve("result");
             Files.createDirectories(resultPath);
 
+            ConversionLogService logService = new ConversionLogService();
+            LibraryService libraryService = new LibraryService();
+
             String libPath = null;
             if (update) {
                 // Спрашиваем путь для обновления локальной библиотеки
@@ -116,7 +119,7 @@ public class SwingEntryPoint {
                 if (result == JFileChooser.APPROVE_OPTION) {
                     libPath = chooser.getSelectedFile().getAbsolutePath();
                     try {
-                        org.example.converter.helper.EmbeddedLibInstaller.copyEmbeddedLibrary(Paths.get(libPath));
+                        libraryService.copyEmbeddedLibrary(Paths.get(libPath));
                         logArea.append("Локальная библиотека обновлена в: " + libPath + "\n");
                     } catch (Exception e) {
                         logArea.append("Ошибка обновления библиотеки: " + e.getMessage() + "\n");
@@ -126,14 +129,21 @@ public class SwingEntryPoint {
                     logArea.append("Операция отменена пользователем\n");
                     return;
                 }
-            } else if (!apply && !isConvert) {
-                // Для деконвертации без применения локальной библиотеки спрашиваем куда сохранить встроенную библиотеку
+            } else if (!apply) {
+                // Для операций без применения локальной библиотеки (конвертация или деконвертация) спрашиваем куда сохранить встроенную библиотеку
                 JFileChooser chooser = new JFileChooser();
                 chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
                 chooser.setDialogTitle("Выберите директорию для сохранения встроенной библиотеки");
                 int result = chooser.showOpenDialog(frame);
                 if (result == JFileChooser.APPROVE_OPTION) {
                     libPath = chooser.getSelectedFile().getAbsolutePath();
+                    try {
+                        libraryService.copyEmbeddedLibrary(Paths.get(libPath));
+                        logArea.append("Встроенная библиотека скопирована в: " + libPath + "\n");
+                    } catch (Exception e) {
+                        logArea.append("Ошибка копирования библиотеки: " + e.getMessage() + "\n");
+                        return;
+                    }
                 } else {
                     logArea.append("Операция отменена пользователем\n");
                     return;
@@ -145,34 +155,18 @@ public class SwingEntryPoint {
 
             ConversionConfig config = new ConversionConfig(apply, update, libPath);
 
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
-            LocalDateTime startTime = LocalDateTime.now();
             String operationType = isConvert ? "конвертация" : "деконвертация";
 
-            // Добавление разделителя между новыми запусками
-            logArea.append("\n----------------------------------------\n");
-
-            // Запись о начале операции
-            logArea.append(String.format("Операция %s началась в %s%n", operationType, startTime.format(formatter)));
-            logArea.append(String.format("Путь до конвертируемого объекта: %s%n", inputPath));
+            // Вывод параметров запуска
+            logArea.append("\n");
+            logArea.append(logService.formatOperationParameters(operationType, inputPath, config, outputLogEnabled));
 
             long startTimeMillis = System.currentTimeMillis();
 
             if (isConvert) {
-                SequenceDiagramConverter converter = new SequenceDiagramConverter();
-                converter.run(inputPath, resultPath, config);
+                SequenceDiagramConverter converter = new SequenceDiagramConverter(config, resultPath);
+                converter.process(inputPath);
             } else {
-                // Для деконвертации: если не применяем локальную библиотеку, копируем встроенную библиотеку
-                if (!apply && libPath != null) {
-                    try {
-                        org.example.converter.helper.EmbeddedLibInstaller.copyEmbeddedLibrary(Paths.get(libPath));
-                        logArea.append("Встроенная библиотека скопирована в: " + libPath + "\n");
-                    } catch (Exception e) {
-                        logArea.append("Ошибка копирования библиотеки: " + e.getMessage() + "\n");
-                        return;
-                    }
-                }
-                
                 try (FileProcessor processor = new FileProcessor(inputPath.getParent(), outputLogEnabled, config)) {
                     processor.process(inputPath);
                 }
@@ -180,11 +174,9 @@ public class SwingEntryPoint {
 
             long endTimeMillis = System.currentTimeMillis();
             long durationSeconds = TimeUnit.MILLISECONDS.toSeconds(endTimeMillis - startTimeMillis);
-            LocalDateTime endTime = LocalDateTime.now();
 
             // Запись о завершении операции
-            logArea.append(String.format("Операция %s завершилась в %s%n", operationType, endTime.format(formatter)));
-            logArea.append(String.format("Время %s заняло %d сек.%n", operationType, durationSeconds));
+            logArea.append(logService.formatCompletionMessage(operationType, durationSeconds));
 
             Path logFile = resultPath.resolve("processing.log");
             if (Files.exists(logFile)) {

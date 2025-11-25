@@ -1,13 +1,15 @@
 package org.example.deconverter;
 
 import org.example.config.ConversionConfig;
-import org.example.converter.helper.EmbeddedLibInstaller;
 import org.example.converter.helper.PumlFileModifier;
+import org.example.service.LibraryService;
 
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.FileWriter;
-import java.nio.file.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -24,6 +26,7 @@ public class FileProcessor implements AutoCloseable {
     private final boolean outputLogEnabled;
     private final ConversionConfig config;
     private final Map<Path, Path> backupFiles = new HashMap<>();
+    private final LibraryService libraryService;
 
     /**
      * Конструктор класса FileProcessor.
@@ -40,6 +43,7 @@ public class FileProcessor implements AutoCloseable {
         this.outputLogEnabled = outputLogEnabled;
         this.config = config;
         this.generator = new PlantUmlAsciiGenerator(null, config); // Передаем config
+        this.libraryService = new LibraryService();
     }
 
     public void process(Path inputPath) throws IOException {
@@ -68,32 +72,31 @@ public class FileProcessor implements AutoCloseable {
             log("Обработка файла: " + pumlFile.getFileName());
             Path resultDir = createResultDir(pumlFile.getParent());
 
-            // Если не применяем локальную библиотеку, нужно модифицировать файлы
+            // Если не применяем локальную библиотеку, нужно модифицировать исходный файл
             if (!config.applyLocalLib() && config.libDirectory() != null) {
+                log("Модификация исходного файла перед деконвертацией...");
+                log("Путь к библиотеке: " + config.libDirectory());
+                
                 // Создаем резервную копию
                 Path backup = PumlFileModifier.createBackup(pumlFile);
                 backupFiles.put(pumlFile, backup);
+                log("Создана резервная копия: " + backup);
                 
-                // Вычисляем путь к библиотеке
-                Path libPath = Paths.get(config.libDirectory()).resolve("sequenceLibPuml/SequenceLibIncludeFile_v4.puml");
-                Path pumlPath = pumlFile.getParent();
-                
-                String includePath;
-                try {
-                    // Пытаемся использовать относительный путь
-                    Path relativePath = pumlPath.relativize(libPath);
-                    includePath = relativePath.toString().replace("\\", "/");
-                } catch (IllegalArgumentException e) {
-                    // Если не получается (разные диски в Windows), используем абсолютный путь
-                    includePath = libPath.toAbsolutePath().toString().replace("\\", "/");
-                }
+                // Вычисляем путь к библиотеке через сервис
+                String includePath = libraryService.calculateIncludePath(pumlFile, config.libDirectory());
+                log("Вычислен путь для include: " + includePath);
                 
                 // Модифицируем файл: комментируем include и добавляем новый
                 PumlFileModifier.modifyIncludeStatements(pumlFile, includePath);
-                log("Файл модифицирован: закомментированы существующие include, добавлен новый путь: " + includePath);
+                log("✓ Файл модифицирован: закомментированы существующие include, добавлен новый путь: " + includePath);
+            } else if (config.applyLocalLib()) {
+                log("Локальная библиотека применяется - исходный файл не модифицируется");
+            } else {
+                log("Предупреждение: путь к библиотеке не указан, модификация файла не выполнена");
             }
 
-            // Генерация ASCII-арта
+            // Генерация ASCII-арта (используется уже модифицированный файл, если была модификация)
+            log("Запуск деконвертации...");
             generator.generateAsciiArt(pumlFile, resultDir);
 
             // Переименование выходного файла

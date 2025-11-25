@@ -14,7 +14,9 @@ import com.vaadin.flow.component.upload.receivers.MemoryBuffer;
 import com.vaadin.flow.router.Route;
 import org.example.converter.SequenceDiagramConverter;
 import org.example.config.ConversionConfig;
-import org.example.deconverter.FileProcessor; // Импорт класса FileProcessor
+import org.example.deconverter.FileProcessor;
+import org.example.service.ConversionLogService;
+import org.example.service.LibraryService;
 import org.example.utils.FileZipper;
 
 import java.io.*;
@@ -110,22 +112,28 @@ public class MainView extends VerticalLayout {
             System.setOut(logStream);
             System.setErr(logStream);
 
+            ConversionLogService logService = new ConversionLogService();
+            LibraryService libraryService = new LibraryService();
+
             String libDir = null;
             if (updateLocalLib.getValue()) {
                 // Для веб-интерфейса пока используем временную директорию, так как нет диалога выбора
-                // В реальном приложении нужно использовать Vaadin Upload или другой механизм
                 libDir = System.getProperty("java.io.tmpdir") + "/PlantUML_sequenceLib";
                 try {
-                    org.example.converter.helper.EmbeddedLibInstaller.copyEmbeddedLibrary(Path.of(libDir));
-                    logArea.setValue("Локальная библиотека обновлена в: " + libDir);
+                    libraryService.copyEmbeddedLibrary(Path.of(libDir));
                 } catch (Exception e) {
                     logArea.setValue("Ошибка обновления библиотеки: " + e.getMessage());
                     return;
                 }
-            } else if (!applyLocalLib.getValue() && !isConvert) {
-                // Для деконвертации без применения локальной библиотеки
+            } else if (!applyLocalLib.getValue()) {
+                // Для операций без применения локальной библиотеки (конвертация или деконвертация)
                 libDir = System.getProperty("java.io.tmpdir") + "/PlantUML_sequenceLib";
-                logArea.setValue("ВНИМАНИЕ: Для веб-интерфейса библиотека будет сохранена во временную директорию: " + libDir);
+                try {
+                    libraryService.copyEmbeddedLibrary(Path.of(libDir));
+                } catch (Exception e) {
+                    logArea.setValue("Ошибка копирования библиотеки: " + e.getMessage());
+                    return;
+                }
             } else if (applyLocalLib.getValue() && libDir == null) {
                 // Если применяем локальную библиотеку, но путь не указан, используем путь по умолчанию
                 libDir = System.getProperty("user.home") + "/Documents/PlantUML_sequenceLib";
@@ -137,32 +145,40 @@ public class MainView extends VerticalLayout {
                     libDir
             );
 
-            boolean outputLogEnabled = enableLogging.getValue(); // Получаем значение нового чекбокса
+            boolean outputLogEnabled = enableLogging.getValue();
+
+            String operationType = isConvert ? "конвертация" : "деконвертация";
+            
+            // Вывод параметров запуска
+            StringBuilder logBuilder = new StringBuilder();
+            logBuilder.append(logService.formatOperationParameters(operationType, inputPath, config, outputLogEnabled));
+            logBuilder.append("\n");
+
+            long startTimeMillis = System.currentTimeMillis();
 
             if (isConvert) {
-                new SequenceDiagramConverter().run(inputPath, resultPath, config);
+                SequenceDiagramConverter converter = new SequenceDiagramConverter(config, resultPath);
+                converter.process(inputPath);
             } else {
-                // Для деконвертации: если не применяем локальную библиотеку, копируем встроенную библиотеку
-                if (!applyLocalLib.getValue() && libDir != null) {
-                    try {
-                        org.example.converter.helper.EmbeddedLibInstaller.copyEmbeddedLibrary(Path.of(libDir));
-                        logArea.setValue("Встроенная библиотека скопирована в: " + libDir);
-                    } catch (Exception e) {
-                        logArea.setValue("Ошибка копирования библиотеки: " + e.getMessage());
-                        return;
-                    }
-                }
-                
                 try (FileProcessor processor = new FileProcessor(inputPath.getParent(), outputLogEnabled, config)) {
                     processor.process(inputPath);
                 }
             }
 
+            long endTimeMillis = System.currentTimeMillis();
+            long durationSeconds = java.util.concurrent.TimeUnit.MILLISECONDS.toSeconds(endTimeMillis - startTimeMillis);
+            
+            logBuilder.append(logService.formatCompletionMessage(operationType, durationSeconds));
+            logBuilder.append("\n");
+
             logStream.close();
 
             if (logFile.exists()) {
-                logArea.setValue(Files.readString(logFile.toPath()));
+                logBuilder.append("\nДетальный лог:\n");
+                logBuilder.append(Files.readString(logFile.toPath()));
             }
+            
+            logArea.setValue(logBuilder.toString());
 
             File zipFile = FileZipper.zipDirectory(resultPath.toFile());
             if (zipFile != null && zipFile.length() > 0) {

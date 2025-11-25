@@ -5,6 +5,7 @@ import org.example.converter.helper.FileHelper;
 import org.example.converter.helper.LocalLibInstaller;
 import org.example.converter.helper.model.Box;
 import org.example.converter.helper.model.Participant;
+import org.example.service.LibraryService;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -16,7 +17,22 @@ import static org.example.constant.PatternStatic.*;
 
 public class SequenceDiagramConverter {
 
+    private final LibraryService libraryService;
+    private final ConversionConfig config;
+    private final Path outputDir;
+
+    public SequenceDiagramConverter(ConversionConfig config, Path outputDir) {
+        this.config = config;
+        this.outputDir = outputDir;
+        this.libraryService = new LibraryService();
+    }
+
     public void run(Path inputPath, Path outputDir, ConversionConfig config) throws IOException {
+        SequenceDiagramConverter converter = new SequenceDiagramConverter(config, outputDir);
+        converter.process(inputPath);
+    }
+
+    public void process(Path inputPath) throws IOException {
         System.setProperty("conversion.output.dir", outputDir.toString());
         System.setProperty("conversion.local.lib.apply", String.valueOf(config.applyLocalLib()));
         System.setProperty("conversion.local.lib.update", String.valueOf(config.updateLocalLib()));
@@ -27,7 +43,9 @@ public class SequenceDiagramConverter {
         System.out.println("Update local lib: " + config.updateLocalLib());
         System.out.println("Local lib path: " + config.libDirectory());
 
-        if (config.libDirectory() != null) {
+        // LocalLibInstaller вызывается только когда применяется локальная библиотека
+        // Если библиотека уже скопирована (при !applyLocalLib), она уже готова к использованию
+        if (config.applyLocalLib() && config.libDirectory() != null) {
             LocalLibInstaller.installIfNeeded(
                     config.applyLocalLib(),
                     config.updateLocalLib(),
@@ -38,14 +56,14 @@ public class SequenceDiagramConverter {
         runWithPath(inputPath.toFile());
     }
 
-    public static void runWithPath(File path) {
+    private void runWithPath(File path) {
         List<File> inputFiles = FileHelper.collectFiles(path);
         for (File inputFile : inputFiles) {
             runWithFile(inputFile);
         }
     }
 
-    public static void runWithFile(File inputFile) {
+    private void runWithFile(File inputFile) {
         if (isAlreadyProcessed(inputFile)) {
             System.out.println("Skipping: " + inputFile.getName());
             return;
@@ -67,7 +85,7 @@ public class SequenceDiagramConverter {
         }
     }
 
-    private static void processPumlFile(File inputFile, File outputFile) throws IOException {
+    private void processPumlFile(File inputFile, File outputFile) throws IOException {
         try (BufferedReader reader = new BufferedReader(new FileReader(inputFile));
              BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile))) {
 
@@ -155,7 +173,7 @@ public class SequenceDiagramConverter {
                 if (!umlSectionStarted && line.equals("@startuml")) {
                     umlSectionStarted = true;
                     writer.write("@startuml\n");
-                    writer.write(generateIncludeLine(title));
+                    writer.write(generateIncludeLine(title, outputFile));
                     continue;
                 }
 
@@ -164,25 +182,46 @@ public class SequenceDiagramConverter {
         }
     }
 
-    private static String generateIncludeLine(String diagramName) {
-        String apply = System.getProperty("conversion.local.lib.apply", "false");
-        String libPath;
-
-        if (Boolean.parseBoolean(apply)) {
-            libPath = System.getProperty("conversion.local.lib.path", "");
-            System.out.println("Используется локальная библиотека: " + libPath);
+    private String generateIncludeLine(String diagramName, File outputFile) {
+        String includePath;
+        
+        if (config.applyLocalLib()) {
+            // Используем локальную библиотеку
+            String libDir = config.libDirectory();
+            if (libDir != null) {
+                // Вычисляем относительный путь от результирующего файла к библиотеке
+                Path outputPath = outputFile.toPath();
+                includePath = libraryService.calculateIncludePathForOutput(outputPath, libDir);
+                System.out.println("✓ Конвертация: используется локальная библиотека, путь: " + includePath);
+            } else {
+                includePath = "libPath/lib.puml/SequenceLibIncludeFile_v4.puml";
+                System.out.println("⚠ Конвертация: путь к библиотеке не указан, используется стандартный: " + includePath);
+            }
         } else {
-            libPath = "libPath/lib.puml";
-            System.out.println("Используется стандартная библиотека: " + libPath);
+            // Не применяем локальную библиотеку - используем путь к сохраненной встроенной библиотеке
+            String libDir = config.libDirectory();
+            if (libDir != null) {
+                Path outputPath = outputFile.toPath();
+                includePath = libraryService.calculateIncludePathForOutput(outputPath, libDir);
+                System.out.println("✓ Конвертация: используется встроенная библиотека, путь: " + includePath);
+                System.out.println("  Результирующий файл: " + outputPath);
+                System.out.println("  Директория библиотеки: " + libDir);
+            } else {
+                includePath = "sequenceLibPuml/SequenceLibIncludeFile_v4.puml";
+                System.out.println("⚠ Конвертация: путь к библиотеке не указан, используется стандартный: " + includePath);
+            }
         }
 
-        return "!include " + libPath + "/SequenceLibIncludeFile_v4.puml\n" +
+        String includeLine = "!include " + includePath + "\n";
+        System.out.println("✓ Сформирована строка include: " + includeLine.trim());
+        
+        return includeLine +
                 "diagramInit(final, \"" + diagramName + "\")\n" +
-                "/'" + libPath + " - путь до файла библиотеки\n" +
+                "/'" + includePath + " - путь до файла библиотеки\n" +
                 diagramName + " - имя исходного файла'/\n";
     }
 
-    private static String processGroup(String line) {
+    private String processGroup(String line) {
         Matcher matcher = GROUP_PATTERN.matcher(line);
         if (!matcher.matches()) return null;
 
@@ -204,11 +243,11 @@ public class SequenceDiagramConverter {
         return String.format("%s(%s, \"%s\")", type, color, text.replace("\"", "\\\""));
     }
 
-    private static String processParticipantColor(String line) {
+    private String processParticipantColor(String line) {
         return PARTICIPANT_COLOR_PATTERN.matcher(line).replaceAll("");
     }
 
-    private static Participant processParticipant(String line) {
+    private Participant processParticipant(String line) {
         Matcher matcher = PARTICIPANT_PATTERN.matcher(line);
         if (!matcher.matches()) return null;
 
@@ -220,7 +259,7 @@ public class SequenceDiagramConverter {
         );
     }
 
-    private static String processArrow(String line) {
+    private String processArrow(String line) {
         Matcher matcher = ARROW_PATTERN.matcher(line);
         if (!matcher.matches()) return null;
 
@@ -238,7 +277,7 @@ public class SequenceDiagramConverter {
         return String.format("%s(%s, %s, \"%s\", \"%s\", \"\")", procType, from, to, operators, text);
     }
 
-    private static void writeBoxContent(BufferedWriter writer, Box box, List<Participant> participants) throws IOException {
+    private void writeBoxContent(BufferedWriter writer, Box box, List<Participant> participants) throws IOException {
         for (Participant p : participants) {
             writer.write(p.toPartiesString() + "\n");
         }
@@ -255,7 +294,7 @@ public class SequenceDiagramConverter {
         writer.write(String.format("BOX(\"%s\", %s, \"%s\")\n", box.name(), box.color(), participantsList));
     }
 
-    private static boolean isAlreadyProcessed(File file) {
+    private boolean isAlreadyProcessed(File file) {
         return file.getName().toLowerCase().endsWith("_bylib.puml");
     }
 }
