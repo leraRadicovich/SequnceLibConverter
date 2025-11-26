@@ -6,7 +6,8 @@
         !$i = $linkOnOriginalSyntaxMap[$i]
         !$source = $originalSyntaxMap[$i].executor
     !endif
-    !if $diagramMode == "final"
+
+    !if $diagramMode == "final" && $status == ""
         !$temp = {}
         !$temp = %json_add($temp, "id", $id)
           !$temp = %json_add($temp, "source", $source)
@@ -17,10 +18,12 @@
         !$temp = %json_add($temp, "comment", $comment)
         !$temp = %json_add($temp, "status", $status)
         !$dependencyMap = %json_add($dependencyMap, $temp)
-        !if $status == ""
-            %invoke_procedure("setOriginalSyntaxDependency", $source)
-            %invoke_procedure("dependencyBuilder", $source)
-        !endif
+        %invoke_procedure("setOriginalSyntaxDependency", $source)
+    !endif
+
+    !if $status == "" && $lastDependencyId != $id
+        %invoke_procedure("dependencyBuilder", $source)
+        !$lastDependencyId = $id
     !endif
 !endprocedure
 
@@ -36,7 +39,7 @@
 !endprocedure
 
 !unquoted procedure dependencyBuilder($source)
-hnote over $source #orange: <size:15><color:red><&fire> <color:black> **ЗАВИСИМОСТЬ** <&fire>
+hnote over $source #yellow/red: <size:15><&fire> **ЗАВИСИМОСТЬ** <&fire>
 !endprocedure
 
 /'Построение строки со списком доработок'/
@@ -44,7 +47,8 @@ hnote over $source #orange: <size:15><color:red><&fire> <color:black> **ЗАВИ
     !$i = 0
     !foreach $item in $dependencyMap
     !$i = $i + 1
-| $i | $item.id | $item.source | $item.point | $item.requirements | $item.rds | $item.duty | $item.comment | $item.status |
+    !$dependOn = getNameByAlias($item.source)
+| $i | $item.id | $dependOn | $item.point | $item.requirements | $item.rds | $item.duty | $item.comment | $item.status |
     !endfor
 !endprocedure
 /'TODO карта зависимостей строится некорректно, но конвертером обрабатывается'/
